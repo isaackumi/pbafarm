@@ -1,0 +1,2267 @@
+{
+  "file": {
+    "id": "01M7RD5Z2VX87M2KSRH9YKX8XA",
+    "name": "Anowa — Workspace (app, brand & clients)"
+  },
+  "pages": [
+    {
+      "id": "p-1-0",
+      "name": "Anowa app · Desktop"
+    },
+    {
+      "id": "p-6-0",
+      "name": "Anowa app · Remaining screens"
+    },
+    {
+      "id": "p-3-0",
+      "name": "Anowa app · Light theme"
+    },
+    {
+      "id": "p-D-2",
+      "name": "Anowa app · Cage keepers (proposed)"
+    },
+    {
+      "id": "p-4-0",
+      "name": "Anowa app · Console, bot & AI"
+    },
+    {
+      "id": "p-E-0",
+      "name": "Anowa · Emails"
+    }
+  ],
+  "artboards": [
+    {
+      "id": "1-0",
+      "name": "01 Home",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/dashboard",
+      "implementation": [
+        "pages/dashboard.js",
+        "components/Dashboard.js",
+        "components/dashboard/WidgetGrid.js",
+        "components/ui/KpiStrip.js",
+        "convex/lib/dashboardLayout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "43a0c8229729e1b33c1564c067bd65f14a54b8676c1e41fee356f0c1a65012e0",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (date eyebrow, Log daily entry, Issue feed) and KPI strip present. Hero row differs: 'Feed logged' + 'Daily mortality' charts instead of Standing biomass card (30d/90d/Cycle) and Needs attention card (per-cage actions). Farm activity is stocking-only, no All/Stocking/Transfers/Harvest/Feed tabs."
+    },
+    {
+      "id": "7Z-0",
+      "name": "_Shell (template)",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/Layout.js",
+      "implementation": [
+        "components/Layout.js",
+        "components/Sidebar.js",
+        "components/Header.js",
+        "components/FarmSwitcher.js",
+        "lib/navigation.js",
+        "components/ui/PageTitle.js"
+      ],
+      "status": "built",
+      "jsxHash": "0741986d4ea6b7581d12b245606d2cefe52a80716cccbf3f9ebcbe804ace6635",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Sidebar: Anowa lockup, tenant block (FarmSwitcher, feed cover line, 'Stock a new cage'), nav with Home, My tasks count, collapsible groups. Topbar: search with ⌘K, bell + dropdown, avatar. Greeting = PageTitle eyebrow/title/actions. Nav adds Ask Anowa/Calendar rows."
+    },
+    {
+      "id": "AJU-0",
+      "name": "32 Customization",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/customization",
+      "implementation": [
+        "pages/customization.js",
+        "components/customization/FormLayoutEditor.js",
+        "components/customization/FieldsBuilder.js",
+        "components/customization/TerminologyEditor.js",
+        "components/customization/DashboardLayoutEditor.js"
+      ],
+      "status": "partial",
+      "jsxHash": "14294b35d82ba06bae293e5361281a3fda592f9b96c89d6df41a1ec92dbb1c2a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting + Tabs (Form layouts/Custom fields/Terminology/Dashboard) present. Missing 3-column Row: Field library (drag types), drag-drop Form canvas, Field settings panel; editor uses section cards with up/down arrows. No 'Preview as field staff'/'Publish' actions."
+    },
+    {
+      "id": "ACU-0",
+      "name": "31 Account & security",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/account",
+      "implementation": [
+        "pages/account.js",
+        "components/settings/index.js",
+        "components/SettingsNav.js",
+        "components/AuthenticatorApp.js",
+        "components/AccountDeletionCard.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c9041c75d65d1ac7924b6122affb20ea75bb2d984053527e4fac77f66d74ceca",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Settings nav, profile card, Sign-in methods (authenticator, phone, password), Data & privacy (download, delete) present. Missing: 'Sign out everywhere' action, Edit profile, Passkey method, Active sessions card (revoke), Act-as access row."
+    },
+    {
+      "id": "A4K-0",
+      "name": "30 Notifications",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/notifications",
+      "implementation": [
+        "pages/notifications.js",
+        "components/NotificationPreferencesCard.js"
+      ],
+      "status": "superseded",
+      "jsxHash": "d2ce16a6b3e9ed214ec2ae285751e61d6d68dd17c1148100f75e6bb976dbff9e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Superseded by 30b U6W-1 (owner fact). Same route /notifications."
+    },
+    {
+      "id": "U6W-1",
+      "name": "30b Notifications — with Telegram",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/notifications",
+      "implementation": [
+        "pages/notifications.js",
+        "components/NotificationPreferencesCard.js"
+      ],
+      "status": "partial",
+      "jsxHash": "46477b93084b129b0e523680409d1818247be540c274176eb1ab58078e679daf",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Inbox feed, Mark all read, Preferences, Delivery card, Quiet hours present. Tabs are All/Unread, not All/Alerts/Approvals/Mentions/System. Delivery is per-channel toggles (app/SMS/WA/email), not per-event × channel matrix; no TG (Telegram) column."
+    },
+    {
+      "id": "9XM-0",
+      "name": "29 Procurement",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/procurement",
+      "implementation": [
+        "pages/procurement/index.js",
+        "lib/procurementSummary.js"
+      ],
+      "status": "partial",
+      "jsxHash": "9ecf751a4d0cbddb3796d9628a72a9e6fc82f9d051782b801d78d6a9573eb2c4",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "New PO, Suppliers, KPI strip (Open, Arriving 7d, Spend, On-time), pipeline, PO detail, Suppliers panel present. Pipeline is Draft/Ordered/Received/Cancelled — no 'Awaiting approval'; detail lacks Approved by, Partial receipt, Message supplier; suppliers lack lead time."
+    },
+    {
+      "id": "9OW-0",
+      "name": "28 Sensors & IoT",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/sensors",
+      "implementation": [
+        "pages/sensors.js",
+        "components/ui/Sparkline.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5df51976ffc7be132b9054de3fcd8026053742c9e8ad0c3a8f9a9498bfc623e0",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "KPI strip, reading tile grid w/ sparklines, readings table (All/Alerts/Quiet), Alert rules panel present. Missing 'Add device' action and Weather KPI; table is per reading, not Devices (device/battery columns); rules lack action text."
+    },
+    {
+      "id": "9GK-0",
+      "name": "27 Compliance & biosecurity",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/compliance",
+      "implementation": [
+        "pages/compliance.js"
+      ],
+      "status": "partial",
+      "jsxHash": "d5f471917e16ea36d38d49b05907666b63694cb217e7118cfb2b326de324ec4e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Start checklist, KPI strip, Biosecurity log table w/ tabs, Open findings, Withdrawal holds, Checklists cards present. Missing 'Export audit pack' action and 'Audit ready %' KPI (biosecurity count instead); findings lack severity + Assign/Close."
+    },
+    {
+      "id": "98M-0",
+      "name": "24 Sales & invoices",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/sales",
+      "implementation": [
+        "pages/sales.js",
+        "components/sales/SaleDetailPanel.js",
+        "components/sales/CustomersPanel.js",
+        "lib/salesSummary.js"
+      ],
+      "status": "partial",
+      "jsxHash": "97ac32c328529d67152e9ab12285105c6e4a89bfee505a82eda6761c77642f07",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Record sale, KPI strip (Sales, Collected, Outstanding, Overdue), table w/ All/Unpaid/Overdue/Walk-in, invoice focus card w/ Record payment, Top customers present. Header has 'New customer' not 'New invoice'; invoice card lacks WhatsApp/PDF buttons."
+    },
+    {
+      "id": "91T-0",
+      "name": "26 Lot traceability",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/trace/[lotId]",
+      "implementation": [
+        "pages/trace/[lotId].js",
+        "components/trace/TraceTimeline.js",
+        "lib/traceView.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5ba6a4b80af3a5f89484ab101348d509174f3eea92fc01682126049613f481fb",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Add dispatch, Export recall pack, KPI strip, Farm-to-customer chain, Dispatches, Compliance checks present. Missing 'Public trace label' card (Print labels); checks lack Biosecurity log and Linked sale rows."
+    },
+    {
+      "id": "8V6-0",
+      "name": "25 Approvals",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/approvals",
+      "implementation": [
+        "pages/approvals.js",
+        "lib/approvalsView.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c1f1c6c3bc2d38d4ec839deba8d7dac98761759d09628a3027e978d8c189a787",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Queue + detail w/ note, Reject/Approve, audit hint present. Tabs only All/Stocking/Transfers/Top-ups (no Expenses, Access requests). Detail lacks density before→after, pre-approval checks list (batch, unit cleaned, withdrawal, water) and 'Ask for water reading'."
+    },
+    {
+      "id": "5OB-0",
+      "name": "23 Member access",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/users?member=<id>",
+      "implementation": [
+        "pages/users.js",
+        "components/MembersPanel.js"
+      ],
+      "status": "partial",
+      "jsxHash": "d83a28f59207e23984f561f5bfc23f904e8e2d90c648e439d68483bcce8b60de",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "MemberDetail: header Save changes/Suspend, settings nav, profile, role card, Site scope (All/Selected), Effective permissions present. Missing multi-company Workspaces & roles card, Security card (2FA/passkey/shared-device/API), Active sessions, Access history, last active."
+    },
+    {
+      "id": "57B-0",
+      "name": "22 Roles & permissions",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/users?view=roles",
+      "implementation": [
+        "pages/users.js",
+        "components/RolesPanel.js",
+        "components/SettingsNav.js"
+      ],
+      "status": "partial",
+      "jsxHash": "9c361633c41b43d2a918978c91f153bedaf822582e889a5fd9feb0975ff377d1",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "New custom role, Compare, roles list, role detail (based-on, counts, member avatars), grouped permissions with granted counts + keys, Permission matrix present. Missing role constraint tiles (Site scope, Expense approval limit, Feed adjustment, Sign-in) and 'sensitive' tags."
+    },
+    {
+      "id": "4O7-0",
+      "name": "21 Workflow automations",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/automations",
+      "implementation": [
+        "pages/automations.js"
+      ],
+      "status": "partial",
+      "jsxHash": "38fbb835aca74f629763d864706e180203f59d662fa9932c7c705e852e0195b3",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Rule editor: flow canvas (When/If/Then steps, Live pill, + Add step), condition side panel, Other automations; Templates on list page. Missing Test run/Publish (Cancel/Save), Fit zoom, Run history link, per-step 'ran 06:41' run state, delayed 'After 60 min if still low' step, fired stats."
+    },
+    {
+      "id": "4HK-0",
+      "name": "20 Projects",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/projects",
+      "implementation": [
+        "pages/projects/index.js",
+        "lib/projectsView.js",
+        "convex/projects.ts",
+        "components/ProjectForm.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c6fadf290be35fb5cf2118786ee8904d62b1faf3a1a08abc34a8973bb11457dc",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "New project action, Timeline/Board/Budget tabs, Gantt timeline (month columns, bars), Row with milestones panel and budget vs actual present. Milestones panel is cross-project 'needs someone' rather than one project's list; extra AnowaBrief."
+    },
+    {
+      "id": "48S-0",
+      "name": "19 Cost accounting",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/expenses",
+      "implementation": [
+        "pages/expenses.js",
+        "lib/pnlSummary.js",
+        "lib/financeFormat.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5cb42fbc1b17fb480cc0b706202647adfcde681d924f1c0bd29ee350205d5424",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "KPI strip (cost/kg, total, direct, site-wide) and cost build-up per kg bars present. Missing tabs (Cost per kg/Cost centres/Allocations/Overheads/Period close; finance NavTabs instead), Allocation rules panel, Cost centres table, Unallocated KPI, Allocation rules/Close period actions."
+    },
+    {
+      "id": "40N-0",
+      "name": "18 Calendar",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/calendar",
+      "implementation": [
+        "pages/calendar.js",
+        "lib/calendarGrid.js"
+      ],
+      "status": "partial",
+      "jsxHash": "884efbfa1c33923a04cca64eec7bf68a3d16621327463485965723e7cac13129",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Schedule action, toolbar (month, ‹ Today ›, Month/Week/Agenda, legend), month grid w/ chips present. Event kinds are task/maintenance/harvest/withdrawal — Paper's Feeding, Sampling and Purchases (PO due) events/legend not sourced."
+    },
+    {
+      "id": "3UX-0",
+      "name": "17 AI assistant",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/assistant",
+      "implementation": [
+        "pages/assistant.js",
+        "components/AskAnowa.js",
+        "convex/assistant.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "6c6af8afcfcb984dfb4101a4a0f75ce14e946205cd028e9aa27409e401f3fb27",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "/assistant renders AskAnowa built to Paper 47/47b (New chat, answers w/ charts, Sources). Not verified: right rail 'Insights today' (Act/Order/Plan) and 'Try asking' cards, inline action chips; layout follows 47 not 17."
+    },
+    {
+      "id": "3RT-0",
+      "name": "07 Health & water",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/health",
+      "implementation": [
+        "pages/health.js"
+      ],
+      "status": "built",
+      "jsxHash": "04144042a6fb91861c0244c80210729faa5ab2d43af1b0d879ff7bcff4743f7c",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Artboard is a header-only stub (Topbar + Greeting: eyebrow 'Production · Water quality…', title, Log water, New treatment). /health Layout renders title/eyebrow and both actions (Log water → /water-entry, New treatment form). Full board is 1SF-0."
+    },
+    {
+      "id": "38C-0",
+      "name": "14 Settings — Team",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/users",
+      "implementation": [
+        "pages/users.js",
+        "components/MembersPanel.js",
+        "components/settings/index.js",
+        "components/SettingsNav.js"
+      ],
+      "status": "partial",
+      "jsxHash": "0796790e4d803f2da9df028806ae89d0ef2d373e008335f913cde585b58031c2",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Settings + Invite member), Settings nav (SettingsFrame/SettingsNav), role summary cards, Members table with All/Active/Invited tabs all render. Diff: 'Last active' column replaced by Status; extra UserManagement block below."
+    },
+    {
+      "id": "332-0",
+      "name": "13 Hatchery",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/hatchery",
+      "implementation": [
+        "pages/hatchery/index.js",
+        "components/hatchery/common.js"
+      ],
+      "status": "partial",
+      "jsxHash": "04f20f638e2649e364d0f90a22e97a4c94e3c98d4634d34c7fb74e19e390d8c6",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (New spawning, Move to nursery), HatcheryNav tabs, KPI strip (broodstock/eggs/larvae/fingerlings), Pipeline columns Spawning/Incubation/Larvae/Nursery present. Diff: tabs are Board/Broodstock/Spawning/Larval/Live feed (no Incubation tab); extra performance cards."
+    },
+    {
+      "id": "2X7-0",
+      "name": "12 My tasks",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/tasks",
+      "implementation": [
+        "pages/tasks.js"
+      ],
+      "status": "partial",
+      "jsxHash": "ae238b7022b77bb3669750ed3a1580fe6d08739ded6f1903c868f7ebcf087c0e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting + Task list render. Missing: 'Team today' side panel (per-person task counts); 'Assigned by me' tab (only Today/Upcoming/Done); New task links to /teams rather than a task form."
+    },
+    {
+      "id": "2QB-0",
+      "name": "11 Reports",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/reports",
+      "implementation": [
+        "pages/reports.js",
+        "components/reports/DeliveryLog.js",
+        "components/reports/SchedulesPanel.js"
+      ],
+      "status": "partial",
+      "jsxHash": "dea114f9ac1e195059a1a3e377c008e0a0bf3cda4e055f8a8d1996700597de7b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Export, New report), tabs Library/Scheduled/Exports, Report grid cards render. Missing: 'Recent exports' table under the library grid; closest is DeliveryLog on manage-only Exports tab with different columns (Status/Recipients vs Format/By/Created)."
+    },
+    {
+      "id": "2N7-0",
+      "name": "07 Health & water",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/health",
+      "implementation": [
+        "pages/health.js"
+      ],
+      "status": "built",
+      "jsxHash": "04144042a6fb91861c0244c80210729faa5ab2d43af1b0d879ff7bcff4743f7c",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Header-only stub (Topbar + Greeting), identical to 3RT-0. /health renders title, eyebrow, Log water and New treatment actions. Full board is 1SF-0."
+    },
+    {
+      "id": "2FB-0",
+      "name": "10 Finance — Cage P&L",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/pnl",
+      "implementation": [
+        "pages/pnl.js",
+        "components/finance/BreakdownRow.js",
+        "lib/sectionTabs.js",
+        "lib/pnlSummary.js"
+      ],
+      "status": "partial",
+      "jsxHash": "67520a5fe0efd82e5d7d11d4d3279a8296720a08674b0f0037802ede8df12aaf",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Record sale, Add expense), finance tabs P&L/Sales/Expenses/By cycle, Margin hero with monthly bars, Cost breakdown panel, Cage profitability table with species tabs all render. Diff: no Batch column (species sub-line instead); extra Net column, date range."
+    },
+    {
+      "id": "27R-0",
+      "name": "09 Feed & inventory",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/feed-management",
+      "implementation": [
+        "pages/feed-management/index.js",
+        "lib/feedOverview.js",
+        "lib/sectionTabs.js"
+      ],
+      "status": "partial",
+      "jsxHash": "799a643335491c094fc612a516b0c34e0edbba946699ec696b6608467fc01a75",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Issue feed, New purchase), tabs (Overview…Lots, Transactions + extras), KPI strip 4, Stock by feed with cover bars, Reorder suggestions + Create PO, Recent movements table. Diff: movements table lacks 'By' column; extra Feed types table."
+    },
+    {
+      "id": "209-0",
+      "name": "08 Harvest",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/harvest",
+      "implementation": [
+        "pages/harvest.js",
+        "components/harvest/HarvestCards.js",
+        "lib/harvestView.js"
+      ],
+      "status": "built",
+      "jsxHash": "ece456689ab3620632b43f389913862486d402a346c1467e1220466f540360d5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Record harvest, Harvest sampling), KPI strip (harvested/avg size/ready/open lots), Size grades + Ready to harvest cards, Harvests table All/Full/Partial with Date/Cage/Type/Lot/Fish/Weight/Status all present."
+    },
+    {
+      "id": "1SF-0",
+      "name": "07 Health & water",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/health",
+      "implementation": [
+        "pages/health.js",
+        "components/health/DoTrendCard.js",
+        "components/health/WaterLog.js",
+        "lib/healthWater.js"
+      ],
+      "status": "built",
+      "jsxHash": "b58e449c86eb735504540372a4e05863fe60a84259988064161d3651ed4d0218",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting + actions, KPI strip (avg DO, temp, active treatments, in withdrawal), Row: DO 7-day card + Active treatments (View all), Water log table All/Alerts/Treatments with Time/Cage/DO/Temp/pH/NH3/Secchi/Status — all present."
+    },
+    {
+      "id": "1GY-0",
+      "name": "06 Stocking & transfers",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/stocking-management",
+      "implementation": [
+        "pages/stocking-management.js",
+        "components/MovementStatus.js"
+      ],
+      "status": "built",
+      "jsxHash": "438c58ea6a35b6482c903a31f99c83da26ddd3306cfb31394c131efcf18adea2",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (New stocking, New transfer), tabs Approvals·N/Stockings/Transfers/Top-ups/Grading, Approval cards with stats + Approve/Reject/View details, Movement history table (Date/Type/From→To/Batch/Fish/ABW/Status) all present."
+    },
+    {
+      "id": "192-0",
+      "name": "05 Sampling & growth",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/biweekly-records",
+      "implementation": [
+        "pages/biweekly-records.js"
+      ],
+      "status": "partial",
+      "jsxHash": "55c6a24f4feb9b399487043a5306a66191c857a3d89e5b216e2e76c127264e04",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (New sampling, Export), KPI strip, ABW by cage bar chart, Sampling records table render. Missing: 'Uniformity'/Grading signal card (CV %, Plan grading →); table tabs are date ranges not All/Tilapia/Catfish; no 'By' column."
+    },
+    {
+      "id": "125-0",
+      "name": "04 Daily entry",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/daily-entry",
+      "implementation": [
+        "pages/daily-entry.js",
+        "components/DailyUploadPage.js"
+      ],
+      "status": "partial",
+      "jsxHash": "14715a4c8ab0c4ffe8dc6c65ce17db10e2846f48ae1fa505ac4d2b590f904af0",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Submit N entries, Upload sheet), Today's round progress card (logged of cages, bar, Copy yesterday), Entry grid per cage (feed, type, mortality, cause, DO, temp, status), footer totals + keyboard hint. Diff: no 'Row C ▾' row filter/per-row done text."
+    },
+    {
+      "id": "QW-0",
+      "name": "03 Cage detail — C-07",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/cages/[id]",
+      "implementation": [
+        "pages/cages/[id].js",
+        "components/UnitTabs.js",
+        "components/charts/GrowthForecastChart.js"
+      ],
+      "status": "partial",
+      "jsxHash": "ba51c1d20d76bd5048eb0d2a8e365f9ec0653d32951885616387a4ca5d792ca4",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Log entry, Transfer fish), KPI strip 5, Growth card + Water now, Recent log table render. Tabs: only Overview/Water/Nets & equipment — missing Daily log, Sampling, Health, Feed, P&L, Documents. Recent log lacks Events tab and By column."
+    },
+    {
+      "id": "IH-0",
+      "name": "02 Cages — Unit board",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/units",
+      "implementation": [
+        "pages/units/index.js",
+        "components/units/UnitCard.js",
+        "components/units/UnitViewSwitch.js",
+        "components/units/UnitsHeader.js"
+      ],
+      "status": "built",
+      "jsxHash": "df8e9a44387d9e84bd5c3aed69e56ef7e68e99925af64f2d564870624917951a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (New cage, QR codes), Toolbar (Board/Table/Site map/Groups switch, All rows, Species, Alerts only · N), Cage grid of UnitCards (species·day, DO/alert signal, biomass, density bar) all present."
+    },
+    {
+      "id": "4U7-0",
+      "name": "16 Onboarding — Add units",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/register-company",
+      "implementation": [
+        "components/onboarding/OnboardingLayout.js",
+        "components/CompanyRegistrationsPage.js",
+        "pages/create-cage.js"
+      ],
+      "status": "partial",
+      "jsxHash": "90da1867fcb4ba3b32cfb3bc64838639be2cf23c8bf3dc5439b97fd66b5d9cb9",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Only the onboarding frame exists (Steps rail, Footer Back/Skip/Continue) used by /register-company with 'units' as an upcoming step. Body not built: unit-type tabs, row generator (Row name/Prefix/How many/Size), Preview grid, Add another row. /create-cage is a single-unit form."
+    },
+    {
+      "id": "50X-0",
+      "name": "15 Sign in",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/login",
+      "implementation": [
+        "pages/login.js",
+        "components/auth/AuthUi.js",
+        "components/LanguageSwitcher.js"
+      ],
+      "status": "partial",
+      "jsxHash": "f1e9838f4559f657f80dba8c5e66a7cf041504ee9c7f16e56d22f7ebc67abc4e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Visual side (lake scene, floating cards, testimonial) and form (language, heading, Email/Phone/SSO tabs, email+password, Forgot?, Sign in, create workspace, footer) built. Missing: tenant/workspace card with Switch, 'Keep me signed in' checkbox, Google/Microsoft/Passkey buttons."
+    },
+    {
+      "id": "54F-0",
+      "name": "15b Sign in — Phone code",
+      "page": "p-1-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/login",
+      "implementation": [
+        "pages/login.js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "357388dc49f8694680a0170f40e2e7bdc2ee1e964fd592bf3f1488fd7341987a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Phone code step: tabs kept, 6-box OtpInput, Resend in 0:24, Verify and sign in, shared-phone note, ← Use email instead, visual side built. Missing: tenant/workspace card with Switch, 'Send via WhatsApp instead' link."
+    },
+    {
+      "id": "EGW-0",
+      "name": "47 Audit log",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/audit-logs",
+      "implementation": [
+        "pages/audit-logs.js",
+        "components/AuditChainStatus.js",
+        "components/settings/index.js"
+      ],
+      "status": "partial",
+      "jsxHash": "4dfb40fcaeb3fd9f9a3c146ad307b3c473261ecebdd75f515a3da3bf3c967f29",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has settings nav, chain-intact strip w/ Verify now, events table (When/Actor/Action/Category) + range filter. Missing: header Export CSV, category tabs (All/Access/Data/Finance/Act-as), Hash column, 'Export & deletion requests' panel; adds summary card."
+    },
+    {
+      "id": "F45-0",
+      "name": "52 Grading",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/grading",
+      "implementation": [
+        "pages/grading.js",
+        "components/GradingForm.js"
+      ],
+      "status": "partial",
+      "jsxHash": "8c7d5063ba6e442283d0f65f36037b3aa735144314a12fb8107bc3177b389e3a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has greeting+Confirm, KPI strip, size-class split table w/ Add class, totals+culls+Counts balance, Recent gradings. Missing: Save draft, CV/size-spread KPI (Unaccounted instead), Grader bars, Sample check, Before→after biomass, Density-after cards."
+    },
+    {
+      "id": "FBD-0",
+      "name": "53 Bulk CSV import",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/bulk-upload",
+      "implementation": [
+        "pages/bulk-upload.js",
+        "components/CsvImportForm.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "15a382d3bc9a243914b60222c50e15b26e69cfb8f84485b86cdbbb0d25b3dc00",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (53). Older /bulk-upload CSV import page exists but is not the Paper 53 design."
+    },
+    {
+      "id": "EWX-0",
+      "name": "48 Equipment & maintenance",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/maintenance",
+      "implementation": [
+        "pages/maintenance.js",
+        "components/units/equipmentColumns.js"
+      ],
+      "status": "partial",
+      "jsxHash": "a3079c0fb1a3ac1a729baba56a32832fdbeeed4e85736b02873c332404d6578f",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (Log inspection, Add equipment), KPI strip, equipment table w/ All/Aeration/Power/Nets tabs + Unit/Equipment/Checked/Next due/Status cols, inspection checklist card (Submit/Add finding). Deviation: 4th KPI is 'In service', not Uptime·30d."
+    },
+    {
+      "id": "HPW-0",
+      "name": "51 Inventory items & lots",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/inventory/items",
+      "implementation": [
+        "pages/inventory/items.js",
+        "components/inventory/InventoryActions.js",
+        "lib/sectionTabs.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5e437b7bec8ab52d4852c891b2a8460b3e80cc857be064f2e0194cd760b5cb1a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Receive/Start count, section tabs, 4-KPI strip, items table w/ category tabs + status pill, item detail w/ Issue to cages/Adjust, avg use. Missing: SKU column, 'Lots · FEFO order' list and On order in detail (shows by-site stock instead)."
+    },
+    {
+      "id": "GM4-0",
+      "name": "49 Farm map",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/units/map",
+      "implementation": [
+        "pages/units/map.js",
+        "components/units/UnitViewSwitch.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5a65eebe2b6cd8d1252d093df2e6f118fe687b50b53e03dc3a2de2a132266cae",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Add cage/Edit layout, Board/Map switch, group filter, legend counts, cage circles w/ DO, coords corner, selected-cage popover+connector (Open cage/Log water), zoom. Missing: 'Colour by' selector, lake shape/mooring lines/shore-base artwork."
+    },
+    {
+      "id": "FIL-0",
+      "name": "56 Integrations — API keys & webhooks",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/api-keys",
+      "implementation": [
+        "pages/api-keys.js",
+        "components/integrations/kit.js",
+        "pages/webhooks.js",
+        "pages/inbound-webhooks.js"
+      ],
+      "status": "partial",
+      "jsxHash": "4f4fdb0d510e3b981eac8570f3a24246c69e82ac291774879c51d5bc57c53780",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has New API key, settings nav, API keys list w/ scopes/last used/Revoke, Outbound webhooks w/ Add endpoint + status pill, Inbound list, API docs link. Missing: outbound 7d success %, inbound received/rejected counts, Signing secret + Rotate block."
+    },
+    {
+      "id": "FOI-0",
+      "name": "57 Messaging & outbox",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/messaging-settings",
+      "implementation": [
+        "pages/messaging-settings.js",
+        "pages/outbox.js"
+      ],
+      "status": "superseded",
+      "jsxHash": "d6cc74324ca2250d2f44cf580480026ac80551f5bcf8668869e6c1f304c41f0e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Superseded by 57b U02-1 (owner)."
+    },
+    {
+      "id": "U02-1",
+      "name": "57b Messaging & outbox — with Telegram",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/messaging-settings",
+      "implementation": [
+        "pages/messaging-settings.js",
+        "pages/outbox.js",
+        "components/OutboxPanel.js"
+      ],
+      "status": "partial",
+      "jsxHash": "ff3c3525ac54f6fa89270b593fd22207b312d0f5bbf8584e7901d5acc362f2e4",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Send test message, settings nav, channel tiles (SMS/WhatsApp/Email), phone outbox banner w/ Sync now. Missing: Telegram tile (CHANNELS has no telegram), per-channel usage meters, Outbox table (Recipient/Channel/Message/Status; All/Queued/Failed) — /outbox is only the offline phone queue."
+    },
+    {
+      "id": "FUF-0",
+      "name": "58 Anowa settings",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/ai-settings",
+      "implementation": [
+        "pages/ai-settings.js"
+      ],
+      "status": "partial",
+      "jsxHash": "93352933def436251692532884515ea5ea303549379739c32843133db8407d05",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Open Anowa, settings nav, BYO-key provider cards, budget/quota bar, usage + log. Missing: 'Enable Anowa' master toggle card, Anowa-managed vs Bring-your-own choice, tokens/requests quota split, 'Who can use Anowa' per-role table (only a link to roles)."
+    },
+    {
+      "id": "G0C-0",
+      "name": "59 Platform admin — Registrations",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/admin/company-registrations",
+      "implementation": [
+        "pages/admin/company-registrations.js",
+        "components/AdminCompanyRegistrationsPage.js"
+      ],
+      "status": "partial",
+      "jsxHash": "cc90acd6a5f35f1568509e93371faf6c2a1414a8f00418e89d6ecda0df4487f8",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Global settings, KPI strip (Tenants/Pending/Rejected), queue table w/ Pending/Approved/Rejected tabs + Approve/Reject, detail panel w/ Checks. Missing: Invite company, MRR & Suspended KPIs, Units column, Plan requested/Sites rows, Ask for info."
+    },
+    {
+      "id": "GXI-0",
+      "name": "60 Sign up",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/signup",
+      "implementation": [
+        "pages/signup.js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "30884a0001c18b4643415be26f33f98ce0a73cac0fe70fe72626879ce4980f7a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Split layout w/ lake scene + cards/quote, language switch, name/email/password, human check, terms, footer all present. Missing: 'Phone (for field codes)' field (code has Confirm password + strength bar instead)."
+    },
+    {
+      "id": "H44-0",
+      "name": "54 Mobile — Scan & QR",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 390,
+      "route": "/scan",
+      "implementation": [
+        "pages/scan.js",
+        "components/QrScanner.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "514d17383900f9540a48f2f41e7bf7f035ed587c83dff7b8990974adcc437f79",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (54 Mobile Scan & QR). Older /scan page + QrScanner exist."
+    },
+    {
+      "id": "H45-0",
+      "name": "55 Mobile — Daily entry",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 390,
+      "route": "/daily-entry",
+      "implementation": [
+        "pages/daily-entry.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "038f0ff4f37ff688682ce290651f48caae1b3a6271099685891736f5a34b4fc5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (55 Mobile Daily entry). Older desktop /daily-entry exists."
+    },
+    {
+      "id": "H82-0",
+      "name": "61 Auth states",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/verify-email, /verify, /reset-password, /invite/[token]",
+      "implementation": [
+        "pages/verify-email.js",
+        "pages/verify.js",
+        "pages/reset-password.js",
+        "pages/invite/[token].js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "02a3bab565a556f0678c12393b91939393aaa8717d8547de0562106fa72b2b5d",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "All 4 state cards exist (Open Gmail, resend countdown, OTP, Save & sign in, invite Decline/Accept + role/expires). Gaps: verify-email is code-based, no 'Wrong address? Change it'; /verify lacks 'Call me instead'; invite lacks Sites row."
+    },
+    {
+      "id": "H9N-0",
+      "name": "50 Organization structure",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/organization-structure",
+      "implementation": [
+        "pages/organization-structure.js",
+        "components/settings/index.js"
+      ],
+      "status": "partial",
+      "jsxHash": "57e0f140b303580717b7b535898d444f0cd36e389aa386f05783a00ab203c9ef",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Add site, settings nav, Structure tree (business units → sites, counts, Add business unit), site detail (location, GPS, timezone, Edit). Missing: unit groups (Row A/B) under sites, Site manager & Units rows, Members avatar strip."
+    },
+    {
+      "id": "HMM-0",
+      "name": "62 System states",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": null,
+      "implementation": [],
+      "status": "not-built",
+      "jsxHash": "b8affe69664d067270b261ca92a459227cce5121e259040192bd723811b10ab5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (62 System states)."
+    },
+    {
+      "id": "HYV-0",
+      "name": "63 Overlays & feedback",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/ActAs.js, ConfirmDeleteModal.js, Toast.js, AppUpdatePrompt.js",
+      "implementation": [
+        "components/ActAs.js",
+        "components/ConfirmDeleteModal.js",
+        "components/ui/Modal.js",
+        "components/Toast.js",
+        "components/AppUpdatePrompt.js"
+      ],
+      "status": "built",
+      "jsxHash": "14412b34abaeecd12bb63049a3d76e794d5e84db9d26bea3f4611aac5cdb0e6b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "All overlay sections cite Paper 63: act-as banner w/ end time + Exit, confirm-delete modal w/ typed confirmWord, App update card (Reload/Later), toast stack w/ status dots and Retry action. Background Sales page is context only."
+    },
+    {
+      "id": "JN9-0",
+      "name": "68 Group & regional reports",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/group-reports",
+      "implementation": [
+        "pages/group-reports.js",
+        "components/SiteKpiTable.js"
+      ],
+      "status": "partial",
+      "jsxHash": "6ff2e7c7601e1c201538be741395686ecd7046698b61d4d74f8471b23b4a5616",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Has Export + Link company, comparison table w/ Group total row. Missing: Companies/Regions switch + group chip, KPI strip, Download PDF, FCR/Survival/12-wk cols (shows units/fish/harvest/sales), Harvest-by-region chart, Linked companies panel."
+    },
+    {
+      "id": "IVO-0",
+      "name": "66 Workforce",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/workforce",
+      "implementation": [
+        "pages/workforce.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "540c922e4968c4a717356679c95ec7824c887a9ac254215d2e4ea2b3cbb57df9",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (66). Existing /workforce is a staff/HR list (add staff card); no roster grid, shift KPIs or Publish roster."
+    },
+    {
+      "id": "J2W-0",
+      "name": "67 Feed types & feeding plans",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/feeding-plans",
+      "implementation": [
+        "pages/feeding-plans.js",
+        "components/ui/KpiStrip.js"
+      ],
+      "status": "partial",
+      "jsxHash": "72f9fc47ada8d2a75636ddf7574dcaa6ce3d9af0828d269d42af805bb04f3d68",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Greeting (New plan, Issue feed), KPI strip (Active plans, Ration today, Farm FCR 30d, feed cover/in store), plan table by weight band with Plans/Feed types links, Feed types panel, Today's plan card (plan %, low-DO cut, ration, meals, from store, Issue N kg to C-07) present. Different: meals show 'Meal N' instead of times with Next/Later; extra 'All rations' table."
+    },
+    {
+      "id": "JA4-0",
+      "name": "64 QR labels",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/cages/qr-codes",
+      "implementation": [
+        "pages/cages/qr-codes.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "32a5ca5ce4e3961f83ac5cc0794a91c8d9c54d77825c9c23c3df2ce96094f12f",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner: not built yet (64 QR labels). Older /cages/qr-codes page exists."
+    },
+    {
+      "id": "P8F-1",
+      "name": "70 Choose your farm (after sign-in)",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/choose-organization",
+      "implementation": [
+        "pages/choose-organization.js",
+        "components/auth/AuthUi.js",
+        "components/OrgAvatar.js"
+      ],
+      "status": "partial",
+      "jsxHash": "411280880572a1cabff6a0f5a61ce43a6621b3da2942868623da489e0ff6cea5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Title, 'Signed in as' subtitle, farm radio cards (Last used badge, selected sky ring, pending dashed with waiting copy), lime 'Continue to …', 'Starting a new farm? Register another organization · Sign out', language switch, secure footer + Privacy/Terms/Status, side panel present. Missing: '· N sites · N cages' on each farm row (role only)."
+    },
+    {
+      "id": "P0P-1",
+      "name": "69 Farm switcher — open",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/FarmSwitcher.js",
+      "implementation": [
+        "components/FarmSwitcher.js",
+        "components/OrgAvatar.js",
+        "components/Sidebar.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c6b2c0ef43cce349f30ad212d47802bd9ebfa71a9e76a0b303f9731a96a4c3eb",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Open switcher: outlined trigger, SWITCH FARM title, farm rows with avatar + role and active tick, disabled pending row, divider, 'Register another organization' row present. Different: pending row reads 'Pending' (farmSwitcher.status.pending) not 'Awaiting approval'; extra Sites section when a farm has several sites. Background page is 64 QR labels (context only)."
+    },
+    {
+      "id": "JHC-0",
+      "name": "65 Species & cage settings",
+      "page": "p-6-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/species",
+      "implementation": [
+        "pages/species.js"
+      ],
+      "status": "partial",
+      "jsxHash": "da322f953bf72e56b73691bf1518754a950b9b8f7155c3aa0347bb9bd06a2760",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Species list with Add species and per-species targets (harvest ABW, FCR, grades) exists. Missing: settings nav, 'Growth curve' and 'Withdrawal' columns, 'Cage defaults' card (volume, net mesh, density warn/max), 'Water alert thresholds' card (DO/temp/pH range bars)."
+    },
+    {
+      "id": "6E2-0",
+      "name": "L · 01 Home",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/dashboard",
+      "implementation": [
+        "components/Dashboard.js",
+        "components/dashboard/HomeSkyHeader.js",
+        "styles/theme.css"
+      ],
+      "status": "partial",
+      "jsxHash": "2d1b6a5a2ad0c1c74683f75f9934519bf1ad24b32972f30e2213b506be4fc0f7",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light tokens + sky panel (default header) exist. Greeting, Log daily entry/Issue feed, KPI strip, FarmAlerts present. Chart is cumulative Feed (30d/90d), not 'Standing biomass' (no Cycle/est. value); 'Feed today' KPI differs; Farm activity is stockings only, no All/Stocking/Transfers/Harvest/Feed tabs."
+    },
+    {
+      "id": "INK-0",
+      "name": "L · 01 Home — Sky & lake (proposal v2)",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/dashboard",
+      "implementation": [
+        "components/dashboard/HomeSkyHeader.js",
+        "components/Dashboard.js",
+        "styles/theme.css",
+        "convex/lib/userPreferences.ts"
+      ],
+      "status": "proposal",
+      "jsxHash": "2ab9784e498fba36b074cd4dc74a197e088cb6f24a700effe5d6bc85e8bbf04b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Proposal per owner, but code already ships it: HomeSkyPanel (sun glow, clouds, haze, cage rings; .home-sky* light/dark CSS) is the DEFAULT home header (effectiveHomeHeader -> 'sky'; 'plain' selectable in /account)."
+    },
+    {
+      "id": "IFL-0",
+      "name": "L · 01 Home — Sky touch (proposal)",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": null,
+      "implementation": [],
+      "status": "proposal",
+      "jsxHash": "f1ab4aa086ca1c9a5687e99649a1e998ab499a5b8d3702f84f5811d14000c09b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Proposal per owner. 'Sky clouds' variant (Cloud left/right, Sun haze) not used in code; only the v2 Sky & lake panel (INK-0) is implemented."
+    },
+    {
+      "id": "6LO-0",
+      "name": "L · 02 Cages",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/units",
+      "implementation": [
+        "pages/units/index.js",
+        "components/units/UnitCard.js",
+        "components/units/UnitViewSwitch.js",
+        "components/units/UnitsHeader.js",
+        "pages/cages/index.js"
+      ],
+      "status": "built",
+      "jsxHash": "ae64767e58884bc31cfe96344494ace6941de730c5c10e54c7b3b38bb4c416bb",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Eyebrow (active · fallow · site), New cage + QR codes, Board/Table/Site map/Groups switch, All rows/Species filters, Alerts only toggle, unit cards (species·Day, DO signal, biomass, density bar with light gradient). /cages is the Table view."
+    },
+    {
+      "id": "6TL-0",
+      "name": "L · 03 Cage detail",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/cages/[id]",
+      "implementation": [
+        "pages/cages/[id].js",
+        "components/UnitTabs.js",
+        "components/GrowthForecastCard.js"
+      ],
+      "status": "partial",
+      "jsxHash": "2cade22bacb9daebb15b8dba0b28fc2343d1022b3e5f10858dcc08bea6173a8d",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Eyebrow/title, Log entry, Transfer fish, KPI strip (Fish/ABW/Biomass/FCR/Survival), Water now, Recent log present. Tabs only Overview/Water/Equipment (no Daily log/Sampling/Health/Feed/P&L/Documents); growth card is a forecast, not 'Growth vs plan'; Recent log lacks Events tab and By column."
+    },
+    {
+      "id": "74T-0",
+      "name": "L · 21 Workflow automations",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/automations",
+      "implementation": [
+        "pages/automations.js"
+      ],
+      "status": "partial",
+      "jsxHash": "74a0fa022d4871ca26165aab1adb40b9abbabda5436746ea945ff13dd86aff6a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Rule editor: dotted flow canvas (light --flow-* vars), Live pill, WHEN/IF/THEN nodes, + Add step, side panel, Other automations. Missing: Test run, Publish (Save instead), Fit/100% + Run history toolbar, per-node run stats, AFTER 60 MIN escalate step, 'Only between'/'Fired N times' condition panel, Templates tab."
+    },
+    {
+      "id": "7BH-0",
+      "name": "L · 22 Roles & permissions",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/users?view=roles",
+      "implementation": [
+        "components/RolesPanel.js",
+        "pages/users.js",
+        "components/settings/index.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5740a8125a752cc88dd00d23330837159496abedf717264e7b9a88194f8f79b3",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Settings frame, New custom role, Compare, roles list (counts, custom, Based on), selected role header with member avatars, grouped permissions 'n / m granted', permission matrix present. Missing: policy tiles (Site scope, Expense approval, Feed adjustment, Sign-in) and 'sensitive' badges."
+    },
+    {
+      "id": "7R0-0",
+      "name": "L · 10 Finance P&L",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/pnl",
+      "implementation": [
+        "pages/pnl.js",
+        "lib/pnlSummary.js",
+        "lib/sectionTabs.js"
+      ],
+      "status": "partial",
+      "jsxHash": "dc44161a67bf42c6e6408a4d72ea732042a905b5c2e9c8d5188358e137fa29a7",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Title, Record sale/Add expense (light gradient overrides), P&L/Sales/Expenses/By cycle tabs, Net margin card + monthly bars, Cost breakdown, Cage profitability with species tabs. Minor: no Batch column (species sub-line instead), extra Net column."
+    },
+    {
+      "id": "7YE-0",
+      "name": "L · 15 Sign in",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/login",
+      "implementation": [
+        "pages/login.js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "3a00cc0f4f0239ec2a7143d77596226a0cf7d71ebd870dc2cc759824e5c70315",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Language switcher, Welcome back, Email/Phone code/SSO tabs, email+password+Forgot, Sign in, create workspace link, footer, sky scene + cards present. Missing: workspace chip (PF · Switch), 'Keep me signed in', Google/Microsoft/Passkey buttons, 2-step verification note."
+    },
+    {
+      "id": "JYF-0",
+      "name": "56 Integrations — API keys & webhooks — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/api-keys",
+      "implementation": [
+        "pages/api-keys.js",
+        "pages/webhooks.js",
+        "pages/inbound-webhooks.js"
+      ],
+      "status": "partial",
+      "jsxHash": "f5358c1d3b6d8c6891b017d9d9ba2bd7bcfe997d81940b5e9e92d68e4007c5e3",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "New API key, keys list (scopes, used ago, Revoke), Outbound webhooks summary, Inbound webhooks, API docs card present. Missing: outbound 7d success % / HTTP status, inbound received/rejected counts, Signing secret + Rotate block."
+    },
+    {
+      "id": "K4C-0",
+      "name": "57 Messaging & outbox — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/messaging-settings",
+      "implementation": [
+        "pages/messaging-settings.js"
+      ],
+      "status": "superseded",
+      "jsxHash": "76fe0edca32742cf221739c787280700667957b0c04570153abfa915134b26b5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Superseded by 57b Light UEW-1 (owner fact)."
+    },
+    {
+      "id": "UEW-1",
+      "name": "57b Messaging & outbox — with Telegram — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/messaging-settings",
+      "implementation": [
+        "pages/messaging-settings.js",
+        "pages/outbox.js",
+        "components/ChatChannelsCard.js"
+      ],
+      "status": "partial",
+      "jsxHash": "6a067185297103f31a4000710fefe7b9a7f0cd53694e3f093e61c47b3f0eaad6",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Send test message, settings frame, channel tiles (SMS/WhatsApp/Email only), Phone outbox banner + Sync now present. Missing: Telegram tile on this page (Telegram linking only in /account ChatChannelsCard); Outbox delivery table (All/Queued/Failed, recipient/channel/message/status). Usage meters not verified."
+    },
+    {
+      "id": "KAJ-0",
+      "name": "58 Anowa settings — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/ai-settings",
+      "implementation": [
+        "pages/ai-settings.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5934fd3f31be37b7d3c142fd3544cbfbb80ed31ba08948d3a58f8d7468b3ee49",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of FUF-0; same route, light via [data-theme=light]. Same gaps as FUF-0: Has Open Anowa, settings nav, BYO-key provider cards, budget/quota bar, usage + log. Missing: 'Enable Anowa' master toggle card, Anowa-managed vs Bring-your-own choice, tokens/requests quota split, 'Who can use Anowa' per-role table (only a link to roles)."
+    },
+    {
+      "id": "KG6-0",
+      "name": "59 Platform admin — Registrations — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/admin/company-registrations",
+      "implementation": [
+        "pages/admin/company-registrations.js",
+        "components/AdminCompanyRegistrationsPage.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c813f44390447a41e7d4733d0d6508c263161e30023e9fde5f4f51932492c946",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of G0C-0; same route, light via [data-theme=light]. Same gaps as G0C-0: Has Global settings, KPI strip (Tenants/Pending/Rejected), queue table w/ Pending/Approved/Rejected tabs + Approve/Reject, detail panel w/ Checks. Missing: Invite company, MRR & Suspended KPIs, Units column, Plan requested/Sites rows, Ask for info."
+    },
+    {
+      "id": "KLV-0",
+      "name": "60 Sign up — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/signup",
+      "implementation": [
+        "pages/signup.js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5428e82344f04aa66482bef00b4e551a18e648b06391bb48b3c06e02d791fc48",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of GXI-0; same route, light via [data-theme=light]. Same gaps as GXI-0: Split layout w/ lake scene + cards/quote, language switch, name/email/password, human check, terms, footer all present. Missing: 'Phone (for field codes)' field (code has Confirm password + strength bar instead)."
+    },
+    {
+      "id": "KOY-0",
+      "name": "61 Auth states — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/verify-email, /verify, /reset-password, /invite/[token]",
+      "implementation": [
+        "pages/verify-email.js",
+        "pages/verify.js",
+        "pages/reset-password.js",
+        "pages/invite/[token].js",
+        "components/auth/AuthUi.js"
+      ],
+      "status": "partial",
+      "jsxHash": "06fcb4880ee028fce14c307281419f88c23a37648abe1e6c8174a940a7256c04",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of H82-0; same route, light via [data-theme=light]. Same gaps as H82-0: All 4 state cards exist (Open Gmail, resend countdown, OTP, Save & sign in, invite Decline/Accept + role/expires). Gaps: verify-email is code-based, no 'Wrong address? Change it'; /verify lacks 'Call me instead'; invite lacks Sites row."
+    },
+    {
+      "id": "KRK-0",
+      "name": "62 System states — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/404",
+      "implementation": [
+        "pages/404.js",
+        "pages/_error.js",
+        "pages/suspended.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "d4195db6488a795a1b0049b18f78aec1dd694b56fc778271430d96e7deab7b3f",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner fact: 62 System states not built yet. Older related pages exist (404, _error, suspended)."
+    },
+    {
+      "id": "KTK-0",
+      "name": "63 Overlays & feedback — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "components/ActAs.js, ConfirmDeleteModal.js, Toast.js, AppUpdatePrompt.js",
+      "implementation": [
+        "components/ActAs.js",
+        "components/ConfirmDeleteModal.js",
+        "components/ui/Modal.js",
+        "components/Toast.js",
+        "components/AppUpdatePrompt.js"
+      ],
+      "status": "built",
+      "jsxHash": "5ee00bb0a1d24982e08afe08e12c79a4ee6f96c068c7a31caf14d3c057f8f569",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of HYV-0: act-as banner, confirm-delete modal, app update card and toast stack render; their [data-theme=light] overrides use this artboard's colours (#16A34A, #D97706, #3D86E6, #F3FAD6)."
+    },
+    {
+      "id": "L23-0",
+      "name": "47 Audit log — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/audit-logs",
+      "implementation": [
+        "pages/audit-logs.js",
+        "components/AuditChainStatus.js",
+        "components/settings/index.js"
+      ],
+      "status": "partial",
+      "jsxHash": "c42ae1d318abc9a4227772415a59efe6e968c1bd36cb7c72e5738e66d65e6cd7",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of EGW-0; same route, light via [data-theme=light]. Same gaps as EGW-0: Has settings nav, chain-intact strip w/ Verify now, events table (When/Actor/Action/Category) + range filter. Missing: header Export CSV, category tabs (All/Access/Data/Finance/Act-as), Hash column, 'Export & deletion requests' panel; adds summary card."
+    },
+    {
+      "id": "LAK-0",
+      "name": "48 Equipment & maintenance — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/maintenance",
+      "implementation": [
+        "pages/maintenance.js",
+        "components/units/equipmentColumns.js"
+      ],
+      "status": "partial",
+      "jsxHash": "226de98deb368f4016494d0f71d479b967516785820212d35cd59dbcfc305732",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of EWX-0; same route, light via [data-theme=light]. Same gaps as EWX-0: Greeting (Log inspection, Add equipment), KPI strip, equipment table w/ All/Aeration/Power/Nets tabs + Unit/Equipment/Checked/Next due/Status cols, inspection checklist card (Submit/Add finding). Deviation: 4th KPI is 'In service', not Uptime·30d."
+    },
+    {
+      "id": "LHP-0",
+      "name": "49 Farm map — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/units/map",
+      "implementation": [
+        "pages/units/map.js",
+        "components/units/UnitViewSwitch.js"
+      ],
+      "status": "partial",
+      "jsxHash": "773b75efb871ccc95dd675fd82e639cb7ca82a80d4a5181f65a858196de45ed8",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of GM4-0; same route, light via [data-theme=light]. Same gaps as GM4-0: Has Add cage/Edit layout, Board/Map switch, group filter, legend counts, cage circles w/ DO, coords corner, selected-cage popover+connector (Open cage/Log water), zoom. Missing: 'Colour by' selector, lake shape/mooring lines/shore-base artwork."
+    },
+    {
+      "id": "LNR-0",
+      "name": "50 Organization structure — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/organization-structure",
+      "implementation": [
+        "pages/organization-structure.js",
+        "components/settings/index.js"
+      ],
+      "status": "partial",
+      "jsxHash": "0e3a02984c52707e07f76c95affb89abf0172b7e88b596fe7c57870520b25540",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of H9N-0; same route, light via [data-theme=light]. Same gaps as H9N-0: Has Add site, settings nav, Structure tree (business units → sites, counts, Add business unit), site detail (location, GPS, timezone, Edit). Missing: unit groups (Row A/B) under sites, Site manager & Units rows, Members avatar strip."
+    },
+    {
+      "id": "LU2-0",
+      "name": "51 Inventory items & lots — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/inventory/items",
+      "implementation": [
+        "pages/inventory/items.js",
+        "components/inventory/InventoryActions.js",
+        "lib/sectionTabs.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5416ac65727eb07596ee48cca1b3cb4d40cb157afd732589e9c6299004cc6e4e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of HPW-0; same route, light via [data-theme=light]. Same gaps as HPW-0: Has Receive/Start count, section tabs, 4-KPI strip, items table w/ category tabs + status pill, item detail w/ Issue to cages/Adjust, avg use. Missing: SKU column, 'Lots · FEFO order' list and On order in detail (shows by-site stock instead)."
+    },
+    {
+      "id": "M1D-0",
+      "name": "52 Grading — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/grading",
+      "implementation": [
+        "pages/grading.js",
+        "components/GradingForm.js"
+      ],
+      "status": "partial",
+      "jsxHash": "4c052ef3f7a3d76c8a78f39eaa7e85cad16c94650dc6cdcc4974a38de22dd0eb",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Light variant of F45-0; same route, light via [data-theme=light]. Same gaps as F45-0: Has greeting+Confirm, KPI strip, size-class split table w/ Add class, totals+culls+Counts balance, Recent gradings. Missing: Save draft, CV/size-spread KPI (Unaccounted instead), Grader bars, Sample check, Before→after biomass, Density-after cards."
+    },
+    {
+      "id": "M7Z-0",
+      "name": "53 Bulk CSV import — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/bulk-upload",
+      "implementation": [
+        "pages/bulk-upload.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "a73628e5066181dff5287939ac57acd7bc0b653483ce95bc44dcaf9c3bcc199a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner fact: 53 Bulk import not built. Older /bulk-upload page exists (has light overrides) but is not the artboard design."
+    },
+    {
+      "id": "MDZ-0",
+      "name": "54 Mobile — Scan & QR — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 390,
+      "route": "/scan",
+      "implementation": [
+        "pages/scan.js",
+        "pages/cages/qr-codes.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "5cb33d8fca735b08f8efa85dd467bc0755161f45051813dca4ca14a525481a88",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner fact: 54 Mobile Scan & QR not built. Older /scan and /cages/qr-codes pages exist."
+    },
+    {
+      "id": "MGE-0",
+      "name": "55 Mobile — Daily entry — Light",
+      "page": "p-3-0",
+      "theme": "light",
+      "width": 390,
+      "route": "/daily-entry",
+      "implementation": [
+        "pages/daily-entry.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "7b73303da3aef8d1f54eb55560a3a2baaf257f514aa89c28092540de4a93b51b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Owner fact: 55 Mobile Daily entry not built. Older /daily-entry page exists (not the mobile design)."
+    },
+    {
+      "id": "S2H-2",
+      "name": "54 Cage keepers — One row up close (drill-in)",
+      "page": "p-D-2",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/cage-keepers/row",
+      "implementation": [
+        "pages/cage-keepers/row.js",
+        "components/keepers/PlanCoverSheet.js",
+        "convex/keepers/board.ts",
+        "convex/keepers/scores.ts"
+      ],
+      "status": "built",
+      "jsxHash": "2d9ba1c67009cd0f1650e049e97223b4bc50942e1701ec7b40ff2a60e86a03de",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Built (in nav, not just proposed). Verified: header Auto-balance + Plan cover, summary strip (No keeper/Logged today/Cover this week), board with No-keeper column + keeper columns (today x of y, unit cards, +more·backup, away/cover), scorecard (on time/survival/FCR/samplings vs farm)."
+    },
+    {
+      "id": "SDY-2",
+      "name": "57 Cage keepers — At scale (1,000 cages, 212 keepers)",
+      "page": "p-D-2",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/cage-keepers",
+      "implementation": [
+        "pages/cage-keepers/index.js",
+        "components/keepers/AnowaBrief.js",
+        "components/keepers/KeeperHeatmap.js",
+        "components/keepers/KeeperList.js",
+        "convex/keepers/board.ts"
+      ],
+      "status": "built",
+      "jsxHash": "b491bd8b3d78811282c83e8202e292c312e2138db5c63e847d97a673561d6163",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Built. Verified: header Assign with Anowa + Plan cover, Anowa brief (4 items w/ fixes, ask box, Updated), per-site heatmap + legend + drag-select assign, keeper list (search, site, chips Needs attention/Over/Away/All, Why column, footer), bulk Nudge/Rebalance bar."
+    },
+    {
+      "id": "S9Z-2",
+      "name": "55 My cages — Keeper (phone)",
+      "page": "p-D-2",
+      "theme": "dark",
+      "width": 390,
+      "route": "/my-cages",
+      "implementation": [
+        "pages/my-cages.js",
+        "convex/keepers/views.ts"
+      ],
+      "status": "built",
+      "jsxHash": "0aa5db4195bb9dceecfe75e8a16440435c72634ec3de89917daa9e60411d8515",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Built. Verified: date·site eyebrow, 'My cages', 'x of y logged' + left before deadline + backup, To do (sample due, Ration/Fish/Yesterday, inline Log today, voice), Done list (time · kg · dead)."
+    },
+    {
+      "id": "SCB-2",
+      "name": "56 Plan cover — Handover sheet",
+      "page": "p-D-2",
+      "theme": "dark",
+      "width": 560,
+      "route": "/cage-keepers (Plan cover sheet)",
+      "implementation": [
+        "components/keepers/PlanCoverSheet.js",
+        "convex/keepers/board.ts"
+      ],
+      "status": "built",
+      "jsxHash": "c5b6f6ea14a6808561f49d824c56b8e3e98a60f91ed20d5b8b54bb3cbd2d9d43",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Built (modal on /cage-keepers and /row). Verified: 'Who looks after X's N cages?', From/Back on, cover picker with load now/while covering, Suggested/Heavy load, Split between two people, 'What moves' list + return note, handover note, Cancel/'Set cover and tell Y'."
+    },
+    {
+      "id": "CET-0",
+      "name": "40 Console — Tenants",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/platform/tenants",
+      "implementation": [
+        "pages/platform/tenants/index.js",
+        "components/platform/PlatformLayout.js",
+        "lib/platformConsole.js"
+      ],
+      "status": "partial",
+      "jsxHash": "ce30678dff1b6393f634b90be48626677406ca60bb60c8654f1bdeab453107d0",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: console sidebar+brand, header, KPIs (MRR/Active/Past due/WhatsApp), tenant table with status tabs+search, Renewals + Plan mix. Missing: header actions 'Export CSV'/'Onboard farm'; table columns MRR, BOT USE·7D, RENEWS replaced by Active 30d/Health/Last activity; nav has Overview/Usage, no 'Bot & messaging'."
+    },
+    {
+      "id": "CXO-0",
+      "name": "44 Console — Tenant detail",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/platform/tenants/[id]",
+      "implementation": [
+        "pages/platform/tenants/[id].js",
+        "components/platform/PlatformLayout.js"
+      ],
+      "status": "partial",
+      "jsxHash": "da4eac3490875669266ba2dc82f86de30e3db67656eaab87bcd6b72c3b024d1a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: breadcrumb header w/ Suspend + Record payment, status strip (status/balance/sites·cages·users/last activity), tabbed body (Invoices, Subscription, Members, Usage, Audit +extra), Subscription card (Change plan/Extend trial/Grant credits), Recent activity. Missing: 'Send pay link on WhatsApp' button under invoices."
+    },
+    {
+      "id": "CJH-0",
+      "name": "41 WhatsApp bot — Log & confirm",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 390,
+      "route": "convex/bot (WhatsApp/Telegram bot)",
+      "implementation": [
+        "convex/bot/process.ts",
+        "convex/bot/pending.ts",
+        "convex/bot/i18n.ts",
+        "convex/bot/agent.ts",
+        "convex/bot/inbound.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "5bf113ad934af4f04a274d54477a8281d790bf22e82872706190d9e7143d4cfc",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: 'Got it. Please check before I save' draft with Unit/Date/Feed/Mortality, Save/Edit/Cancel, 'Saved to C-07. N of M cages logged… Still missing' + Undo (10 min), agent Q&A (unit status incl. eFCR). Missing: 'Suggested ration today: X kg (ABW, °C)' line in the draft; row-level FCR answer depends on LLM tools."
+    },
+    {
+      "id": "CLU-0",
+      "name": "42 Alerts & insights (AI-001/002)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/alerts",
+      "implementation": [
+        "pages/alerts.js",
+        "components/FarmAlerts.js",
+        "lib/farmAlerts.js"
+      ],
+      "status": "partial",
+      "jsxHash": "5d0c865ee29e54598baf1b9ca83e0a4a5d26c8a6d655cda30cf73726e26b3580",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: header w/ Alert rules + Weekly AI report, summary cards (Critical/Warning/Resolved 7d), alert list with category chips, suggested actions, Acknowledge/Resolve, feeding-plan table. Different: 4th KPI is 'Feed today' not 'Feed vs suggested −4.2%'; no 'Sent on WhatsApp to N' tag; ration table lacks YESTERDAY column."
+    },
+    {
+      "id": "COS-0",
+      "name": "43 Account — Connect WhatsApp & billing",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/account + /billing",
+      "implementation": [
+        "pages/account.js",
+        "components/ChatChannelsCard.js",
+        "pages/billing.js",
+        "components/billing/TenantBilling.js"
+      ],
+      "status": "partial",
+      "jsxHash": "a63b58b76945849b070256b28769e532b7ea07cbc76783f868b4763a384ab88c",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "No single 'Messaging & billing' page: Channels (WhatsApp/Telegram connect code+timer, default site, reminder, Preferences, Disconnect) on /account; Plan & billing (current plan, usage limits, invoices) on /billing. Missing: header actions Invite team/Download invoices, 'Change plan' button, pay-link renewal note."
+    },
+    {
+      "id": "D4N-0",
+      "name": "46 Suspended workspace",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/suspended",
+      "implementation": [
+        "pages/suspended.js",
+        "components/billing/BareShell.js",
+        "lib/billingBalance.js"
+      ],
+      "status": "built",
+      "jsxHash": "c687a85584a3b22ed358f14ed93d284879cb920bc381349b295e446f4491da51",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Suspended card verified: warn icon, '{org} is paused' heading, past-due body copy, Balance due row with amount·invoice, 'Pay with MoMo or card' + Contact support buttons, not-owner note."
+    },
+    {
+      "id": "D4O-0",
+      "name": "45 Weekly AI report",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/weekly-report",
+      "implementation": [
+        "pages/weekly-report.js",
+        "lib/weeklyReportView.js"
+      ],
+      "status": "partial",
+      "jsxHash": "edd342fe2f2a81767b75e826281a6860c78cd1b9da3d0318ab1bc7548918ca0b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: eyebrow, Regenerate, scope tabs (sites/Company-wide), week picker, AI summary card w/ 'Written from…', Key figures, Costs (finance only). Missing: 'Download PDF' action; Priorities not a separate block (plain text); key figures lack Logging completeness; costs are free text, not Feed cost/Cost per kg rows."
+    },
+    {
+      "id": "PJ0-0",
+      "name": "47 Ask Anowa — Expanded",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/assistant",
+      "implementation": [
+        "pages/assistant.js",
+        "components/AskAnowa.js",
+        "lib/askAnowa.js",
+        "convex/assistant.ts"
+      ],
+      "status": "superseded",
+      "jsxHash": "c864d6b95baf217642b4743c3a4247c5ce92969bf226c72282184fddb84ce070",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Superseded by 47c–e (owner). Current /assistant (AskAnowa.js comments 'Paper 47/47b') implements this layout: rail, topbar with WhatsApp + model chip, composer chips."
+    },
+    {
+      "id": "RKJ-0",
+      "name": "49 WhatsApp — Voice note in Twi",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 390,
+      "route": "convex/bot (voice notes)",
+      "implementation": [
+        "convex/bot/voice.ts",
+        "convex/bot/i18n.ts",
+        "convex/bot/pending.ts",
+        "convex/bot/process.ts"
+      ],
+      "status": "built",
+      "jsxHash": "b55fe6f14cbed3759d67ecec9d2bcfd7e327076a4f12a83a72e2613835c3b882",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified (BOT-005): Twi transcription (Khaya), 'Heard in Twi · English', 'I heard N cages. Please check before I save', per-cage fields, CHECK flag + noisy-line note, 'Not said, saved as 0', 'Saving for today', Save both/Edit/Cancel, progress+Undo, 'Which one had 3 dead fish?' picker + Another."
+    },
+    {
+      "id": "RMQ-0",
+      "name": "48 Ask Anowa — Does it for you (draft)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/assistant",
+      "implementation": [
+        "components/AskAnowa.js",
+        "components/AnowaDraftCard.js",
+        "lib/anowaDraftCard.js"
+      ],
+      "status": "built",
+      "jsxHash": "9fe35cae5aa7b344a394117e608848213a3d00a67921133841dbc49bde194ada",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: rail (New chat, modes, Recent, Back to the farm), topbar (Ask Anowa on WhatsApp, model), draft card (Draft · N changes · not saved, Expires in, daily_entry + purchase_order with on hand/needed/to order, role line, Cancel/Edit/Confirm both), follow-up 'Not now', composer chips (Deep analysis, site, period, Show charts)."
+    },
+    {
+      "id": "POM-0",
+      "name": "47b Ask Anowa — Model menu open (live list)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/assistant",
+      "implementation": [
+        "components/AskAnowa.js",
+        "convex/lib/llmProviders.ts"
+      ],
+      "status": "superseded",
+      "jsxHash": "68057c63e4067b4778737745828bb87cb147497cedf695b2082b3004c30e5682",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Superseded by 47c–e (owner). Model menu (ModelChip with live catalog) exists in AskAnowa.js."
+    },
+    {
+      "id": "RUI-0",
+      "name": "50 Cycle planner — What if",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "/cycle-planner",
+      "implementation": [
+        "pages/cycle-planner.js",
+        "components/charts/CyclePlanChart.js",
+        "convex/lib/cyclePlan.ts"
+      ],
+      "status": "built",
+      "jsxHash": "2712c66586c240bc7b21b2d728bbd18970df5e8ea7ec776b0b17a4b285a94525",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Verified: header Save plan/Compare plans, inputs card (name+Draft, units, stock on, fingerlings at g, harvest slider 250–550 g, feed/sale price, learned survival/FCR/growth, Change assumptions), result tiles (harvest, tonnes, feed, cash, sales, margin), feed/weight chart, compare table, compareNote insight, + Add a plan."
+    },
+    {
+      "id": "TGS-0",
+      "name": "47c Ask Anowa — Expanded v2 (conversation, light)",
+      "page": "p-4-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "/assistant",
+      "implementation": [
+        "components/AskAnowa.js"
+      ],
+      "status": "proposal",
+      "jsxHash": "0f55cbb5c890b9c12769892debcf3f7602681848110d8cdf7eb9d765535e919a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Proposal awaiting owner approval. Current /assistant has rail/history/Saved answers but none of v2 specifics: 'Continued from the quick panel', 'History kept 90 days · Clear', Today/This week grouping, KPI tiles in answer, light styling."
+    },
+    {
+      "id": "TL4-0",
+      "name": "47d Ask Anowa — Mobile, first open",
+      "page": "p-4-0",
+      "theme": "light",
+      "width": 390,
+      "route": "/assistant (mobile)",
+      "implementation": [
+        "components/AskAnowa.js"
+      ],
+      "status": "proposal",
+      "jsxHash": "0fbe7bc4d8c00ce3b01856939baa68d9c8e967986cdf908c5d5204fd206a7db4",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Proposal awaiting owner approval. Code has a phone drawer and 'Try asking' prompts, but no 'Anowa noticed' card, greeting copy or this mobile first-open layout."
+    },
+    {
+      "id": "TN5-0",
+      "name": "47e Ask Anowa — Mobile, conversation",
+      "page": "p-4-0",
+      "theme": "light",
+      "width": 390,
+      "route": "/assistant (mobile)",
+      "implementation": [
+        "components/AskAnowa.js"
+      ],
+      "status": "proposal",
+      "jsxHash": "76b5e44424ead38a79e4c1695411b5684da87a13300ecaa304169cf7e61e3d43",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Proposal awaiting owner approval. No mobile conversation header with 'Saved · kept 90 days' or Save/Share/Draft sampling tasks row in code."
+    },
+    {
+      "id": "TP8-1",
+      "name": "71 Sidebar — grouped (Production open)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/Sidebar.js",
+      "implementation": [
+        "components/Sidebar.js",
+        "lib/navigation.js",
+        "lib/sidebarState.js"
+      ],
+      "status": "partial",
+      "jsxHash": "be194acaf0be8e80f53a13b4496e1e115bf18392bd84768a3b7cb967e440edff",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Approved; being built in PR #47. On main: collapsible sections incl. Production, top-level Ask Anowa + Calendar, My tasks count. Missing: Record/Watch/Review & plan sub-labels, Alerts/Approvals counts, merged 'Records' tabbed page (Daily/Bi-weekly/Stocking/Transfers still separate links)."
+    },
+    {
+      "id": "TTA-1",
+      "name": "71b Sidebar — groups for every section",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "lib/navigation.js",
+      "implementation": [
+        "lib/navigation.js",
+        "components/Sidebar.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "ee08b8fef637da917d48ff7cd2496819de7d9dc97ed0f71fda7dfe821b42d0ae",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Approved; being built in PR #47. Main has the top-level order (Home…Settings) but none of the per-section labelled groups or '+' merged tabbed pages; Bulk Upload, Create Cage, Cages Settings still nav links."
+    },
+    {
+      "id": "TVA-1",
+      "name": "72a Search — open, nothing typed (⌘K)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/Header.js (NavSearch)",
+      "implementation": [
+        "components/Header.js",
+        "components/ui/SearchField.js"
+      ],
+      "status": "partial",
+      "jsxHash": "30a631154d46d0cdaab6a8fe59f33f3ab7fc68214f20a68a6a01b219b73835c4",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Approved; being built in PR #47. Main: ⌘K focuses a top-bar 'Search pages' field listing pages only. Missing: modal palette, Quick actions (Log daily entry, Issue feed…), Recent records (cages/batches), Ask Anowa Tab hand-off, key-hint footer."
+    },
+    {
+      "id": "TXA-1",
+      "name": "72b Search — typed \"c-07\" (records + actions)",
+      "page": "p-4-0",
+      "theme": "dark",
+      "width": 1440,
+      "route": "components/Header.js (NavSearch)",
+      "implementation": [
+        "components/Header.js"
+      ],
+      "status": "not-built",
+      "jsxHash": "4dedce0500ec74f55dc4614399e756a7cbeadb9c1c7be7082c461a3401e95a3a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Approved; being built in PR #47. Main search matches page names only: no cage/batch/lot record results, per-record actions (Log water, Transfer…), 'Do it for C-07' section or Ask Anowa ⌘↵."
+    },
+    {
+      "id": "SQH-0",
+      "name": "E0 Animated logo — GIF frames (1.6s, plays once then holds)",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 1180,
+      "route": "scripts/email/build-email-assets.mjs",
+      "implementation": [
+        "scripts/email/build-email-assets.mjs",
+        "public/email/anowa-logo@2x.gif",
+        "public/email/anowa-logo-urgent@2x.gif",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "036ad1d13e11120b8f0b36b5afbf6e1570cfc1cf25c2a164ebfea876d6e9c124",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "GIF built from AnowaLogo paths, 1.6s plays once & holds: dot, beat, line draws, tail flick, lime flash, settle. Used in layout header (+urgent red variant, static PNG for Outlook/mso). Timings differ slightly (line starts 0.15s vs 0.35s)."
+    },
+    {
+      "id": "SRN-0",
+      "name": "E1 Sign-in code",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "verificationCodeEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/emailVerification.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "b4b56d8abf0b3d13841e70db15af15ed24237aece580ffb389a0a5c7cf5de415",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Only an email-VERIFICATION code exists (label 'Verification code', copy 'confirm your email'); no sign-in-by-email-code flow (auth.ts Email provider is password reset only). Header, headline, 6 digit boxes, divider, ignore line, footer built. Missing: 'Requested at … from <device>' row, 'reply and we'll look into it', Help footer link."
+    },
+    {
+      "id": "T8M-2",
+      "name": "E1 Sign-in code — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "verificationCodeEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "b29797dec0e9fc0d4c5fc23f156c5226883db71011264ada68ab3953a1fcf16b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same as E1 light (verification code, not sign-in; no request device row; no Help link). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "SSU-0",
+      "name": "E2 Password reset",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "passwordResetEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/auth.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "bcba10681a29bc5c86a25ccc8f3171b3bee8c2e1bc3c7f3cbbe9c2469fc608b5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Header, 'Let's get you back in.', intro with bold email, Choose a new password button, link-as-text, divider, ignore line, footer built. Different: code-based (adds digit boxes; 15 min not link/1 hour). Missing: WhatsApp/Telegram-links-stop note; Help footer link."
+    },
+    {
+      "id": "T1X-1",
+      "name": "E7 Scheduled report (with CSV)",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "scheduledReportEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/lib/reportEmail.ts",
+        "convex/reportSchedules.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "004f563836a5d69e100126f77ef373bbe76303921f7540ce7bd8eb3e646582e7",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Header 'Report · name', headline 'name, period.', numbers strip (≤3), CSV attachment card ('Attached · N rows · opens in Excel or Sheets'), Open the full report button, footer w/ manage link; CSV actually attached (reportSchedules.ts attachments). Footer lacks Help link."
+    },
+    {
+      "id": "STY-0",
+      "name": "E3 Invite to a farm",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "inviteEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/users.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "787d0408721ef5db80391b7336ffaa229110bbd7e69ea01e844163f8c4243b18",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Blue sky hero with inviter avatar pill, 'Join <org> on Anowa.', role intro, 3 tiles, Accept invitation button, expiry note, footer all render. Differences: tiles are Role/Organization/Expires (not Site/Cages); no site/cages sentence; extra link-as-text; no Help footer link."
+    },
+    {
+      "id": "SV2-0",
+      "name": "E4 Approval needed",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "approvalEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/lib/notificationEmail.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "a4633081b3cee2359a4cb68589aa2a73ac3a5ae585364edde344ca63be043216",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Header, 'One stocking needs your yes.', intro, request card (label·org + Waiting pill + one-line summary), Review and approve + Reject buttons, sign-in note, footer built. Missing: card detail rows (Fish/Average weight/Supplier), 'Anowa checked…' note, 'reply on WhatsApp', request time; Help link."
+    },
+    {
+      "id": "T9Q-2",
+      "name": "E2 Password reset — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "passwordResetEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "1bacf9e623a9a91fdb4b646d6a97ebbf5d19aac32085e56f070796bcd6fd483e",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same gaps as E2 light (code-based, no WhatsApp/Telegram note, no Help link). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "TAO-2",
+      "name": "E3 Invite to a farm — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "inviteEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "03e951ad2f420e208fdfec264eb3b84730eaefb497f91ea1463a8b9d581e6cc5",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same as E3 light (tiles Role/Organization/Expires instead of Site/Cages). Hero is fixed blue gradient (fine in dark). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "TBW-2",
+      "name": "E4 Approval needed — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "approvalEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "303d81c114355f4b02bb0c3156c7c87d0a2bb905f32297d0a1ec96c2cd6b656b",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same gaps as E4 light. Waiting pill keeps light #FEF3C7/#92400E in dark (artboard uses #FBBF24 amber). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "SW6-0",
+      "name": "E5 Farm alert (urgent)",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "alertEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/lib/notificationEmail.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "f98312fa1774044291c008bcad10d90d10fd305cdcd4e98f14a5b91cf0ceb75a",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Red urgent header+GIF, reading band (caption/value/limit), 'Act now.' headline, What to do steps box, inverse 'Open C-07' button, footer built. Missing: keeper note row w/ avatar (keeperNote supported but never passed by notificationEmail.ts, no avatar); 'paused, not turned off' footer copy; Help link."
+    },
+    {
+      "id": "SXA-0",
+      "name": "E6 Weekly Anowa summary",
+      "page": "p-E-0",
+      "theme": "light",
+      "width": 680,
+      "route": "weeklySummaryEmail (convex/lib/emailTemplates/templates.ts)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts",
+        "convex/lib/notificationEmail.ts",
+        "convex/aiReports.ts",
+        "convex/lib/weeklyReport.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "1d013a04fd9794a9f363aefaadb694318aa70747388c2a517c3ab611bc234047",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Header 'Your week · range', headline, intro, dark good-number card (lime value), numbered 01–03 things, Ask Anowa button, footer all render (data from aiReports/weeklyReport). Diffs: intro counts units not entries/samplings/sales; extra report text + 'Open the weekly report' link; footer 'Choose which emails' vs change day/stop; no Help."
+    },
+    {
+      "id": "TFM-2",
+      "name": "E7 Scheduled report (with CSV) — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "scheduledReportEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "c21f2ab3749ffed8a725def128def2d5430f71bf2c85d1a640b94e12d8d27f81",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same as E7 light. CSV badge keeps white bg/#15803D in dark (artboard dark uses #4ADE80 accent). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "TD9-2",
+      "name": "E5 Farm alert (urgent) — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "alertEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "76cf18d6f80c251c8fbac0b5774b81113e91d1e01298568ff73ac7bcf1a09e5f",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same gaps as E5 light (no keeper note row, footer copy). Reading band has dark override (.band #2A1215/.band-t #FCA5A5 vs artboard #2A1414/#F87171). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    },
+    {
+      "id": "TEG-2",
+      "name": "E6 Weekly Anowa summary — Dark",
+      "page": "p-E-0",
+      "theme": "dark",
+      "width": 680,
+      "route": "weeklySummaryEmail (dark)",
+      "implementation": [
+        "convex/lib/emailTemplates/templates.ts",
+        "convex/lib/emailTemplates/layout.ts"
+      ],
+      "status": "partial",
+      "jsxHash": "e785af4decc792003a510c6964482e74f0404e70b218df97e5e826fb661f104c",
+      "hashedAt": "2026-11-20",
+      "verifiedAt": null,
+      "notes": "Same gaps as E6 light (intro counts, extra report link, footer copy, no Help link); good-number card already dark. Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query."
+    }
+  ]
+}

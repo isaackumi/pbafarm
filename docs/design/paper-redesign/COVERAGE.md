@@ -1,5 +1,7 @@
 # Route & component coverage
 
+> **Superseded for status tracking by the [Paper design ledger](../paper-ledger.md)** ([rules](../README.md)). The ticks below came from PR claims, and some screens marked `[x]` were not built; trust the ledger, which is checked against the code and Paper hashes.
+
 Every route in `pages/` and every shared UI component maps to a Paper artboard (file **PBA Farm — Redesign**, `01M7RD5Z2VX87M2KSRH9YKX8XA`) or to a named **pattern**. The build agent works through this list top to bottom and ticks each row in its PR. If a row is ambiguous, ask the designer and don't improvise.
 
 Artboard ids are listed in [HANDOFF.md §3](./HANDOFF.md). Patterns are defined at the bottom of this file.
