@@ -1,6 +1,6 @@
 /**
  * Row of KPI cells divided by hairlines (Paper 01 Home, 28 Sensors).
- * items: [{ label, value, valueTone: 'warn'|'alert'|'good', suffix, suffixTone: 'muted'|'unit'|'good'|'alert'|'cyan' }]
+ * items: [{ label, value, valueTone: 'warn'|'alert'|'good', suffix, suffixTone: 'muted'|'unit'|'good'|'alert'|'cyan'|'note'|'noteWarn' }]
  */
 // Suffixes are 13/16 (Paper 24 Sales "+18% vs Oct"); 'unit' is the 14/18
 // muted unit of Paper 01 Home ("/ 44", "kg · 31 of 38 logged").
@@ -10,6 +10,9 @@ const SUFFIX = {
   good: 'text-good text-[13px] leading-4',
   alert: 'text-alert text-[13px] leading-4',
   cyan: 'text-pearl-cyan text-[13px] leading-4',
+  // Paper 52 Grading: muted / amber on dark, body text on 52 Light.
+  note: 'text-muted text-[13px] leading-4 [html[data-theme=light]_&]:text-text',
+  noteWarn: 'text-warn text-[13px] leading-4 [html[data-theme=light]_&]:text-text',
 }
 const VALUE = { warn: 'text-warn', alert: 'text-alert', good: 'text-good' }
 

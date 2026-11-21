@@ -105,6 +105,8 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'liveFeedLogs', index: 'by_companyId_and_date' },
   { table: 'nurseryMovements', index: 'by_companyId_and_moveDate' },
   { table: 'stockOperations', index: 'by_companyId_and_operationDate' },
+  // Grading drafts (Paper 52): work in progress, exported and purged with the org.
+  { table: 'gradingDrafts', index: 'by_companyId_and_unitId' },
   { table: 'expenses', index: 'by_company_and_date' },
   { table: 'expenseCategories', index: 'by_company_and_key' },
   { table: 'purchaseOrders', index: 'by_company' },

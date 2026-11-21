@@ -243,6 +243,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `governance.requestAccountDeletion` | `account` | self | self | self | self | self |
 | `governance.requestExport` | `org.data.export` | yes | yes | no | no | no |
 | `governance.requestOrgDeletion` | `org.data.delete` | yes | yes | no | no | no |
+| `grading.discardDraft` | `production.transfer.approve` | yes | yes | no | no | no |
+| `grading.drafts` | `production.transfer.approve` | yes | yes | no | no | no |
+| `grading.recent` | `production.view` | yes | yes | yes | yes | yes |
+| `grading.saveDraft` | `production.transfer.approve` | yes | yes | no | no | no |
+| `grading.view` | `production.transfer.approve` | yes | yes | no | no | no |
 | `groupReports.overview` | `group.reports.view` | yes | yes | no | no | no |
 | `groupReports.subsidiarySites` | `group.reports.view` | yes | yes | no | no | no |
 | `harvest.create` | `production.harvest.record` | yes | yes | yes | yes | no |
@@ -365,6 +370,11 @@ Regenerate: `WRITE_PERMISSION_MATRIX=1 npx vitest run convex/permissions.test.ts
 | `mfaTotp.startEnrolment` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfaTotp.status` | `allowlisted` | see test | see test | see test | see test | see test |
 | `mfaTotp.verify` | `allowlisted` | see test | see test | see test | see test | see test |
+| `navSearch.navCounts` | `allowlisted` | see test | see test | see test | see test | see test |
+| `navSearch.palette` | `allowlisted` | see test | see test | see test | see test | see test |
+| `navSearch.quickHints` | `allowlisted` | see test | see test | see test | see test | see test |
+| `navSearch.recents` | `allowlisted` | see test | see test | see test | see test | see test |
+| `navSearch.recordRecent` | `allowlisted` | see test | see test | see test | see test | see test |
 | `notificationPreferences.mine` | `account` | self | self | self | self | self |
 | `notificationPreferences.update` | `account` | self | self | self | self | self |
 | `notifications.deleteNotification` | `account` | self | self | self | self | self |

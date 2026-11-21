@@ -2180,11 +2180,53 @@ const schema = defineSchema({
     unitId: v.optional(v.id('cages')),
     reason: v.optional(v.string()),
     idempotencyKey: v.optional(v.string()),
+    /** Grading (Paper 52): grader bars and the size spread from the sample check. */
+    grading: v.optional(
+      v.object({
+        graderBars: v.optional(v.string()),
+        classes: v.number(),
+        sampledFish: v.number(),
+        cvBeforePct: v.union(v.number(), v.null()),
+        cvAfterPct: v.union(v.number(), v.null()),
+      }),
+    ),
     createdBy: v.optional(v.id('users')),
     updatedAt: v.number(),
   })
     .index('by_companyId_and_operationDate', ['companyId', 'operationDate'])
+    .index('by_companyId_and_kind_and_operationDate', ['companyId', 'kind', 'operationDate'])
     .index('by_companyId_and_idempotencyKey', ['companyId', 'idempotencyKey']),
+
+  /**
+   * A grading in progress (Paper 52 "Save draft"): one per source unit, so a
+   * grader can weigh samples, leave and resume. Deleted when the grading is
+   * confirmed. Arrays are bounded by lib/gradingMath GRADING_LIMITS.
+   */
+  gradingDrafts: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.optional(v.id('farmLocations')),
+    unitId: v.id('cages'),
+    date: v.string(),
+    graderBars: v.optional(v.string()),
+    classes: v.array(
+      v.object({
+        cageId: v.optional(v.id('cages')),
+        quantity: v.optional(v.number()),
+        abw: v.optional(v.number()),
+        batchNumber: v.optional(v.string()),
+        /** Weighing rounds of fish weights (g). */
+        samples: v.array(v.array(v.number())),
+      }),
+    ),
+    culls: v.optional(v.number()),
+    reason: v.optional(v.string()),
+    sampledBy: v.optional(v.id('users')),
+    sampledAt: v.optional(v.number()),
+    updatedBy: v.id('users'),
+    updatedAt: v.number(),
+  })
+    .index('by_companyId_and_unitId', ['companyId', 'unitId'])
+    .index('by_companyId_and_updatedAt', ['companyId', 'updatedAt']),
 
   /**
    * Operating expenses (INV-007). Cost centre is the company, optionally a
