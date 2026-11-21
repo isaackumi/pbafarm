@@ -404,6 +404,71 @@
     },
     "speciesBiomass": "{species} · {biomass}"
   },
+  "dailyMobile": {
+    "title": "Saisie du jour",
+    "dateBy": "{date} · {name}",
+    "back": "Retour",
+    "history": "Historique des saisies",
+    "unknownCage": "Cage inconnue",
+    "waiting": {
+      "one": "{count} saisie en attente de synchronisation",
+      "other": "{count} saisies en attente de synchronisation"
+    },
+    "savedOnDevice": "Les saisies restent sur cet appareil",
+    "offline": "Hors ligne",
+    "sendNow": "Envoyer",
+    "sending": "Envoi",
+    "sent": {
+      "one": "{count} saisie envoyée",
+      "other": "{count} saisies envoyées"
+    },
+    "sendFailed": {
+      "one": "{count} saisie à vérifier",
+      "other": "{count} saisies à vérifier"
+    },
+    "noSignal": "Serveur injoignable. Réessayez quand vous aurez du réseau",
+    "changeCage": "Changer de cage, actuellement {name}",
+    "pickCage": "Choisir une cage",
+    "searchCages": "Rechercher une cage",
+    "openOfTotal": "{open} cages sur {total} encore à saisir",
+    "inDraft": "Brouillon",
+    "keepTyping": {
+      "one": "{count} de plus. Tapez pour affiner",
+      "other": "{count} de plus. Tapez pour affiner"
+    },
+    "noMatch": "Aucune cage ne correspond",
+    "close": "Fermer",
+    "feedGiven": "Aliment distribué",
+    "plan": "Plan {kg} kg",
+    "chooseFeed": "Choisir un aliment",
+    "lessFeed": "Moins d'aliment, 1 kg",
+    "moreFeed": "Plus d'aliment, 1 kg",
+    "bags": {
+      "one": "{count} sac",
+      "other": "{count} sacs"
+    },
+    "bagsAria": {
+      "one": "Mettre l'aliment à {count} sac, {kg} kg",
+      "other": "Mettre l'aliment à {count} sacs, {kg} kg"
+    },
+    "asPlan": "= plan",
+    "asPlanAria": "Mettre l'aliment au plan",
+    "poorAppetite": "Appétit faible",
+    "avg7": "moy. 7 j {count}",
+    "addPhoto": "ajouter une photo",
+    "addDetails": "ajouter des détails",
+    "detailsTitle": "Détails de mortalité, {name}",
+    "done": "Terminé",
+    "fewerDead": "Un mort de moins",
+    "moreDead": "Un mort de plus",
+    "doMgL": "OD mg/L",
+    "tempC": "Temp. °C",
+    "ph": "pH",
+    "save": "Enregistrer {name}",
+    "saveNext": "Enregistrer {name} · puis {next}",
+    "saved": "{name} enregistrée",
+    "savedNext": "{name} enregistrée. Suivante : {next}"
+  },
   "biweekly": {
     "pageTitle": "Saisie bimensuelle",
     "crumbRecords": "Relevés bimensuels",

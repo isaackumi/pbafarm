@@ -66,7 +66,9 @@ const TITLE_BY_PREFIX = [
 
 /**
  * `eyebrow` and `actions` (up to two GradientButtons) fill the Paper page
- * header; `hideTitle` lets a page render its own.
+ * header; `hideTitle` lets a page render its own. `bareOnPhone` drops the app
+ * header and the top padding below md, for a phone screen that draws its own
+ * header (Paper 55).
  */
 const Layout = (props) => {
   const tabbed = useTabbedPage()
@@ -87,7 +89,7 @@ function TabBody({ children, actions, slot }) {
   )
 }
 
-const Shell = ({ children, title: initialTitle, eyebrow, actions, hideTitle = false }) => {
+const Shell = ({ children, title: initialTitle, eyebrow, actions, hideTitle = false, bareOnPhone = false }) => {
   const router = useRouter()
   const [title, setTitle] = useState(initialTitle || 'Dashboard')
   // Remembered across pages and reloads (lib/sidebarState): Layout remounts per page.
@@ -152,8 +154,15 @@ const Shell = ({ children, title: initialTitle, eyebrow, actions, hideTitle = fa
         }`}
       >
         <ActAsBanner />
-        <Header onOpenMenu={() => setMobileNavOpen(true)} />
-        <main className="flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9 lg:pb-10 animate-fade-in bg-transparent">
+        {bareOnPhone ? (
+          // display: contents keeps the header sticky to the column on md+.
+          <div className="contents max-md:hidden">
+            <Header onOpenMenu={() => setMobileNavOpen(true)} />
+          </div>
+        ) : (
+          <Header onOpenMenu={() => setMobileNavOpen(true)} />
+        )}
+        <main className={`flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9 lg:pb-10 animate-fade-in bg-transparent${bareOnPhone ? ' max-md:!pt-0' : ''}`}>
           {!hideTitle && (
             <PageTitle
               className="mb-7 print:hidden"
