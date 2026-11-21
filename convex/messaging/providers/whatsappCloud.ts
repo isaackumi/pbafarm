@@ -122,6 +122,12 @@ export type ChatMessage =
   | { kind: 'text'; text: string }
   /** Up to 3 reply buttons (WhatsApp limit). */
   | { kind: 'buttons'; text: string; buttons: ChatButton[] }
+  /**
+   * Rows of buttons (Telegram inline keyboard). `html`: the text uses
+   * Telegram's HTML subset. WhatsApp has no grid: it gets the plain text and
+   * the first 3 buttons.
+   */
+  | { kind: 'keyboard'; text: string; html?: boolean; rows: ChatButton[][] }
   /** A pick list, up to 10 rows (WhatsApp limit). */
   | { kind: 'list'; text: string; button: string; rows: Array<ChatButton & { description?: string }> }
   /**
@@ -140,6 +146,15 @@ export type ChatMessage =
     }
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+
+/** Telegram HTML to plain text (tags dropped, entities decoded). */
+function stripHtml(s: string): string {
+  return s
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+}
 
 /** The Graph API body for a chat message (exported for tests). */
 export function whatsappChatPayload(to: string, message: ChatMessage): Record<string, unknown> {
@@ -162,6 +177,13 @@ export function whatsappChatPayload(to: string, message: ChatMessage): Record<st
           },
         },
       }
+    case 'keyboard': {
+      const plain = message.html ? stripHtml(message.text) : message.text
+      const buttons = message.rows.flat().slice(0, 3)
+      return buttons.length
+        ? whatsappChatPayload(to, { kind: 'buttons', text: plain, buttons })
+        : whatsappChatPayload(to, { kind: 'text', text: plain })
+    }
     case 'list':
       return {
         ...base,

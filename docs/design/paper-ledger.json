@@ -2340,12 +2340,16 @@
       "theme": "dark",
       "width": 390,
       "route": "telegram bot: morning round message",
-      "implementation": [],
-      "status": "not-built",
+      "implementation": [
+        "convex/bot/rounds.ts",
+        "convex/bot/roundI18n.ts",
+        "convex/crons.ts"
+      ],
+      "status": "partial",
       "jsxHash": "fc8325856dde2c17b8f74d1758a74bea491c087ea9a12c83292412ecedb08d4b",
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. Keeper morning round at 06:00: cages with today's ration from the feeding plan (PROD-015 rations), exception flag, per-cage inline buttons Fed as planned / Same as yesterday / Edit, and Log all as planned. Needs editMessage and per-site feeding times (not in feedingPlans today)."
+      "notes": "Morning round card built (phase 1): sent at the keeper shift start (default 06:00 site time, held during quiet hours) with own cages, today's ration from the feeding plan, exceptions first, and per-cage Fed as planned / Same as yesterday / Edit buttons plus \"Log all N as planned\". The card is edited in place (editMessageText). Telegram only; not sent on WhatsApp. Telegram renders no colour, so amber/red flags are bold text with markers. Not yet checked in a live Telegram chat."
     },
     {
       "id": "UPM-0",
@@ -2354,12 +2358,16 @@
       "theme": "dark",
       "width": 390,
       "route": "telegram bot: morning round message",
-      "implementation": [],
-      "status": "not-built",
+      "implementation": [
+        "convex/bot/groups.ts",
+        "convex/bot/pending.ts",
+        "convex/bot/rounds.ts"
+      ],
+      "status": "partial",
       "jsxHash": "495b8f279f028eb46f1578c3a96eb0263119fd52a57d8cf98f2b6c58034bcf6d",
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. Round card edited in place after taps, then the existing draft flow (Got it. Please check before I save, Save all / Edit / Cancel), then Saved + Undo (10 min)."
+      "notes": "\"Log all\" builds a draft group: the user checks it, then Save all commits each draft through pending.commit (same rules as the web form, idempotent), with a 10-minute Undo. Telegram renders no colour, so amber/red flags are bold text with markers. Not yet checked in a live Telegram chat."
     },
     {
       "id": "UYB-1",
@@ -2368,12 +2376,16 @@
       "theme": "dark",
       "width": 390,
       "route": "telegram bot: /t command",
-      "implementation": [],
-      "status": "not-built",
+      "implementation": [
+        "convex/bot/templates.ts",
+        "convex/bot/groups.ts",
+        "convex/bot/inbound.ts"
+      ],
+      "status": "partial",
       "jsxHash": "ddbeebf9bc935e57398af14fde80819f356e678d4546709f159033beb60c9312",
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. New /t command lists saved templates as inline buttons; using Water check asks for DO and temp in one line and returns a draft with a low-DO flag plus Tell manager / Remind me buttons."
+      "notes": "The /t command lists templates as inline buttons. Water check takes DO and temperature in one line and returns a draft with a low-DO flag. You can save your last entry as a template. Using a template never writes directly; it fills drafts that you check and save. Telegram renders no colour, so amber/red flags are bold text with markers. Not yet checked in a live Telegram chat."
     },
     {
       "id": "VQL-1",
@@ -2381,13 +2393,17 @@
       "page": "p-G-0",
       "theme": "dark",
       "width": 1440,
-      "route": "/settings/messaging/templates",
-      "implementation": [],
-      "status": "not-built",
+      "route": "/bot-templates",
+      "implementation": [
+        "pages/bot-templates.js",
+        "components/messaging/BotTemplates.js",
+        "convex/bot/templates.ts"
+      ],
+      "status": "built",
       "jsxHash": "96aa87b21312dfa8b78f8c89002a51abab312704a01a89e987754195011143a6",
       "hashedAt": "2026-11-21",
-      "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. Settings > Messaging > Bot templates: usage strip, templates table (fills in, who can use, uses 30d, share personal template), editor with field sources and a Telegram preview. New table needed."
+      "verifiedAt": "2026-11-21",
+      "notes": "Browser-checked locally (dark, 1440) against VQL-1. It has the usage strip, the templates table, the editor and a Telegram preview, and is linked from Settings > Messaging. The route is /bot-templates, not /settings/messaging/templates, following the existing settings routes."
     },
     {
       "id": "UZD-1",
@@ -2536,12 +2552,14 @@
       "theme": "light",
       "width": 390,
       "route": "telegram bot: morning round message",
-      "implementation": [],
-      "status": "not-built",
+      "implementation": [
+        "convex/bot/rounds.ts"
+      ],
+      "status": "partial",
       "jsxHash": "89f523772435c24d1e1c3c5e13a1aaae7a5cff1ee7e52fe01e0d1423e0b039d1",
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
-      "notes": "Proposed (owner request 2026-11-21), not approved or built. Light variant of T1a (Telegram day theme)."
+      "notes": "Same message as T1a; the light look comes from the Telegram client theme. Telegram renders no colour, so amber/red flags are bold text with markers. Not yet checked in a live Telegram chat."
     },
     {
       "id": "WEZ-1",

@@ -1,7 +1,8 @@
 import * as Effect from 'effect/Effect'
 import * as Schema from 'effect/Schema'
 import type { FetchFn } from '../../lib/effectHttp'
-import { decodeBody, providerPost, runSend } from './send'
+import { decodeBody, providerPost, runSend, SEND_TIMEOUT_MS } from './send'
+import type { HttpPolicy, HttpTransportError } from '../../lib/effectHttp'
 import { providerError, type SendResult } from './types'
 import type { ChatMessage } from './whatsappCloud'
 
@@ -16,6 +17,18 @@ import type { ChatMessage } from './whatsappCloud'
  * - Errors: { ok: false, error_code, description }.
  * Telegram has no 24-hour window or templates: a template renders as its
  * fallback text and buttons.
+ *
+ * Verified 2026-11-21 (morning round, T1a/T1b):
+ * - POST …/editMessageText { chat_id, message_id, text, parse_mode?, reply_markup? }
+ *   edits a bot message in place; answer { ok: true, result: Message }.
+ *   An edit with the same text and keyboard fails 400 "Bad Request: message
+ *   is not modified" (treated as done). "message to edit not found" and
+ *   "message can't be edited" (deleted, or older than 48 h) mean: send anew.
+ * - parse_mode "HTML" allows <b>, <i>, <pre>, <code>, <blockquote>; every
+ *   other "<", ">" and "&" must be escaped (escapeHtml). Telegram cannot
+ *   colour text or buttons, so the round card uses bold, monospace bars and
+ *   leading markers instead.
+ * - An inline keyboard is rows of buttons; we keep at most 100 buttons.
  */
 const TgError = Schema.Struct({ description: Schema.optional(Schema.String) })
 const TgSent = Schema.Struct({
@@ -24,8 +37,34 @@ const TgSent = Schema.Struct({
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
+/** Escape user or record text for parse_mode HTML. */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** Most buttons we put on one message (Telegram allows 100). */
+export const MAX_KEYBOARD_BUTTONS = 100
+
+const tgButton = (b: { id: string; title: string }) => ({ text: clip(b.title, 64), callback_data: b.id.slice(0, 64) })
+
 /** The sendMessage body for a chat message (exported for tests). */
 export function telegramPayload(chatId: string, message: ChatMessage): Record<string, unknown> {
+  if (message.kind === 'keyboard') {
+    let left = MAX_KEYBOARD_BUTTONS
+    const rows: ReturnType<typeof tgButton>[][] = []
+    for (const row of message.rows) {
+      const cut = row.slice(0, Math.max(0, left)).map(tgButton)
+      if (!cut.length) break
+      rows.push(cut)
+      left -= cut.length
+    }
+    return {
+      chat_id: chatId,
+      text: clip(message.text, 4096),
+      ...(message.html ? { parse_mode: 'HTML' } : {}),
+      ...(rows.length ? { reply_markup: { inline_keyboard: rows } } : {}),
+    }
+  }
   const text =
     message.kind === 'template' ? message.fallbackText : message.text
   const buttons =
@@ -45,15 +84,15 @@ export function telegramPayload(chatId: string, message: ChatMessage): Record<st
             // Pick lists one per row; up to 3 action buttons side by side.
             inline_keyboard:
               message.kind === 'list'
-                ? buttons.map((b) => [{ text: clip(b.title, 64), callback_data: b.id.slice(0, 64) }])
-                : [buttons.slice(0, 3).map((b) => ({ text: clip(b.title, 64), callback_data: b.id.slice(0, 64) }))],
+                ? buttons.map((b) => [tgButton(b)])
+                : [buttons.slice(0, 3).map(tgButton)],
           },
         }
       : {}),
   }
 }
 
-function tgPost(token: string, method: string, body: unknown) {
+function tgPost(token: string, method: string, body: unknown, policy?: HttpPolicy) {
   return providerPost(
     {
       url: `https://api.telegram.org/bot${encodeURIComponent(token)}/${method}`,
@@ -66,6 +105,7 @@ function tgPost(token: string, method: string, body: unknown) {
       // Never echo the URL: it carries the bot token.
       return description ? `Telegram ${status}: ${description.slice(0, 160)}` : providerError(status, text)
     },
+    policy,
   )
 }
 
@@ -90,4 +130,49 @@ export async function answerTelegramCallback(token: string, callbackQueryId: str
     tgPost(token, 'answerCallbackQuery', { callback_query_id: callbackQueryId }).pipe(Effect.as({})),
     fetchImpl,
   )
+}
+
+/**
+ * Edits are idempotent (the same text twice is "not modified"), so unlike a
+ * send they are retried on a timeout as well as on 5xx and network errors.
+ */
+export const EDIT_POLICY: HttpPolicy = {
+  timeoutMs: SEND_TIMEOUT_MS,
+  retries: 2,
+  retryBaseDelayMs: 300,
+  retryOn: (error: HttpTransportError) =>
+    error._tag === 'HttpNetworkError' ||
+    error._tag === 'HttpTimeoutError' ||
+    (error._tag === 'HttpStatusError' && error.status >= 500),
+}
+
+export type EditResult =
+  | { ok: true; notModified: boolean }
+  /** `gone`: the message cannot be edited any more (deleted, too old): send a new one. */
+  | { ok: false; error: string; gone: boolean }
+
+const NOT_MODIFIED = /message is not modified/i
+const GONE = /message to edit not found|message can't be edited|message_id_invalid|MESSAGE_ID_INVALID/i
+
+/**
+ * Edit a message the bot sent (text and inline keyboard) in place. "Not
+ * modified" counts as done. Never throws.
+ */
+export async function editTelegramChat(
+  token: string,
+  chatId: string,
+  messageId: number,
+  message: ChatMessage,
+  fetchImpl?: FetchFn,
+): Promise<EditResult> {
+  const body = { ...telegramPayload(chatId, message), message_id: messageId }
+  const program = tgPost(token, 'editMessageText', body, EDIT_POLICY).pipe(
+    Effect.as({} as { providerMessageId?: string }),
+    Effect.catchTag('ProviderRejected', (e) =>
+      NOT_MODIFIED.test(e.message) ? Effect.succeed({ providerMessageId: 'not_modified' }) : Effect.fail(e),
+    ),
+  )
+  const r = await runSend(program, fetchImpl)
+  if (r.ok) return { ok: true, notModified: r.providerMessageId === 'not_modified' }
+  return { ok: false, error: r.error, gone: GONE.test(r.error) || !r.retryable }
 }

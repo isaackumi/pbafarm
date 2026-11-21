@@ -24,6 +24,9 @@ import { parseShortCode } from '../lib/tokens'
 import { closeDraft } from './pending'
 import { logbookButton, logbookPlan } from './logbook'
 import { voiceButton, voiceCommand, voicePlan } from './voice'
+import { roundButton, roundCommand } from './rounds'
+import { deadReply, groupButton } from './groups'
+import { awaitingInput, templateButton, templatesCommand } from './templates'
 import { MAX_EVENT_AGE_MS } from './verify'
 import { REJECT_REASON_CODES, MAX_REASON_CHARS, askRejectReason, awaitingReason, keepPending } from './approvals'
 
@@ -384,6 +387,14 @@ export const route = internalMutation({
       const verb = sep > 0 ? raw.slice(0, sep) : raw
       const arg = sep > 0 ? raw.slice(sep + 1) : ''
       const pendingId = ctx.db.normalizeId('pendingBotActions', arg)
+      const source = { sourceMessageId: inbound.externalId, sentAt: inbound.sentAt }
+      const bt = { ...tgt, bindingId: binding._id }
+      // Morning round (T1a/T1b), draft groups and templates (T2a).
+      const flowPlan =
+        (await roundButton(ctx, bound, verb, arg, bt, source)) ??
+        (await groupButton(ctx, bound, verb, arg, bt, inbound.externalId)) ??
+        (await templateButton(ctx, bound, verb, arg, bt, source))
+      if (flowPlan) return flowPlan
       const scanPlan = await logbookButton(ctx, bound, verb, arg, { ...tgt, bindingId: binding._id }, inbound.externalId)
       if (scanPlan) return scanPlan
       const voiceReply = await voiceButton(ctx, bound, verb, arg, { ...tgt, bindingId: binding._id }, inbound.externalId)
@@ -503,6 +514,15 @@ export const route = internalMutation({
       if (companies.length <= 1) return { type: 'reply', ...tgt, messages: [text(s.companySet(bound.company.name))] }
       return { type: 'reply', ...tgt, messages: [orgPicker(locale, companies)] }
     }
+    const tArg = /^\/t(?:@\w+)?(?:\s+(\S{1,12}))?\s*$/i.exec(msgText)
+    if (tArg) {
+      return await templatesCommand(ctx, bound, tArg[1] ?? '', { ...tgt, bindingId: binding._id }, {
+        sourceMessageId: inbound.externalId,
+        sentAt: inbound.sentAt,
+      })
+    }
+    const roundArg = /^\/?(?:ROUND|TOURNEE|TOURNÉE)\b\s*(ON|OFF)?\s*$/i.exec(msgText)
+    if (roundArg) return await roundCommand(ctx, bound, roundArg[1] ?? '', { ...tgt, bindingId: binding._id })
     const voiceArg = /^\/?(?:VOICE|VOIX)\b\s*(.*)$/i.exec(msgText)
     if (voiceArg) return { type: 'reply', ...tgt, messages: [text(await voiceCommand(ctx, bound, voiceArg[1].slice(0, 20)))] }
     if (command === 'STOP' || command === '/STOP') {
@@ -527,6 +547,11 @@ export const route = internalMutation({
         sourceMessageId: inbound.externalId,
       }
     }
+    // A water-check template waiting for its readings, then "C-11 3 dead" on an open group (no LLM).
+    const flowText =
+      (await awaitingInput(ctx, bound, msgText, { ...tgt, bindingId: binding._id }, { sourceMessageId: inbound.externalId, sentAt: inbound.sentAt })) ??
+      (await deadReply(ctx, bound, msgText, { ...tgt, bindingId: binding._id }))
+    if (flowText) return flowText
     return {
       type: 'agent',
       ...tgt,

@@ -9009,5 +9009,115 @@
       "body": "Scheduled upgrade. Keep logging: entries queue offline and sync after.",
       "statusPage": "Status page"
     }
+  },
+  "botTemplates": {
+    "title": "Bot templates",
+    "eyebrow": "Settings · Messaging · Telegram",
+    "new": "New template",
+    "range": "{first} to {last}",
+    "strip": {
+      "templates": "templates",
+      "uses": "uses in 30 days",
+      "saved": "typing saved this month",
+      "hintBefore": "Keepers type",
+      "hintAfter": "in Telegram to pick one. Every use is a draft they check and save."
+    },
+    "tabs": {
+      "all": "All",
+      "shared": "Shared",
+      "personal": "Personal · {count}"
+    },
+    "table": {
+      "title": "Templates",
+      "sorted": "Sorted by use",
+      "template": "TEMPLATE",
+      "fills": "FILLS IN",
+      "who": "WHO CAN USE",
+      "uses": "USES 30D",
+      "editing": "Editing",
+      "edit": "Edit",
+      "view": "View",
+      "share": "Share with site",
+      "personalBy": "{name} · personal",
+      "empty": "No templates yet. Make one with New template, or tap Save my last entry as a template in Telegram."
+    },
+    "kind": {
+      "daily_plan": "Daily entry",
+      "daily_same": "Daily entry",
+      "water_check": "Water reading",
+      "feed_issue": "Feed issue"
+    },
+    "kindLong": {
+      "daily_plan": "Daily entry",
+      "daily_same": "Daily entry, same as yesterday",
+      "water_check": "Water reading",
+      "feed_issue": "Feed issue"
+    },
+    "fills": {
+      "plan": "plan",
+      "same": "same as yesterday",
+      "mine": "my cages",
+      "cages": "{count} cages",
+      "issue": "{kg} kg"
+    },
+    "who": {
+      "only": "Only {name}",
+      "site": "{site} · {count}"
+    },
+    "cages": {
+      "mine": "My cages",
+      "mineHint": "The cages each keeper keeps that day",
+      "row": "Row {row}, all cages",
+      "rowAt": "Row {row}, all cages, {site}",
+      "rowHint": "{cages}, new cages join automatically",
+      "list": "{count} cages"
+    },
+    "src": {
+      "feedKg": "Feed kg",
+      "feedPlan": "From feeding plan, per cage",
+      "feedSame": "Same as yesterday, per cage",
+      "feedType": "Feed type",
+      "typePellet": "From the cage's current pellet",
+      "typeSame": "Yesterday's feed type",
+      "dead": "Dead fish",
+      "deadValue": "Ask each time, 0 if not said",
+      "do": "DO",
+      "doValue": "Typed in one line, low DO flagged",
+      "temp": "Temperature",
+      "tempValue": "Typed in one line",
+      "shared": "Shared with"
+    },
+    "share": {
+      "only": "Only you",
+      "site": "Everyone at {site}"
+    },
+    "editor": {
+      "name": "Template name",
+      "namePlaceholder": "Name this template",
+      "type": "Type",
+      "shortcut": "Shortcut",
+      "cages": "Cages",
+      "pickFeed": "Choose a feed type",
+      "quantity": "Quantity (kg)",
+      "delete": "Delete",
+      "save": "Save template"
+    },
+    "preview": {
+      "title": "Preview in Telegram",
+      "check": "Please check before I save:",
+      "save": "Save",
+      "saveAll": "Save all {count}",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "dead": "dead",
+      "temp": "temp",
+      "pellet": "Current pellet",
+      "yesterdayKg": "yesterday's kg"
+    },
+    "toast": {
+      "saved": "Template saved",
+      "deleted": "Template deleted",
+      "shared": "Shared with {site}"
+    }
   }
 }

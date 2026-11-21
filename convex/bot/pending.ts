@@ -13,6 +13,8 @@ import { addDays } from '../lib/dates'
 import { saveDailyBatch, removeDailyRecordAs } from '../dailyRecords'
 import { recordOutboundUsageAs } from '../feed'
 import { reverseTransactionAs } from '../inventory'
+import { recordReadingAs } from '../waterQuality'
+import { logAudit } from '../lib/tenancy'
 import { botCtx, checkBinding, farmDate, inScope, matchUnit, unitsInScope, type BoundMember, type MemberScope } from './scope'
 import { t, type BotLocale } from './i18n'
 import { CHECK_CONFIDENCE, fuzzyMatchUnit, rankUnits } from './unitMatch'
@@ -31,6 +33,8 @@ export const proposalInput = v.union(
   v.object({
     kind: v.literal('daily_entry'),
     unit: v.string(),
+    /** Set by the bot's own flows (morning round, templates), never by the model: the exact unit. */
+    cageId: v.optional(v.id('cages')),
     feedKg: v.optional(v.number()),
     feedType: v.optional(v.string()),
     mortality: v.optional(v.number()),
@@ -245,7 +249,9 @@ export async function buildProposal(
 
   if (input.kind === 'daily_entry') {
     if (!can(bound.member, 'production.daily.record')) return { ok: false, error: 'You do not have permission to record daily entries.' }
-    const picked = resolveUnit(units, input.unit, !!opts.pickUnit)
+    const byId = input.cageId ? units.find((u) => u._id === input.cageId) : undefined
+    if (input.cageId && !byId) return { ok: false, error: `No unit called "${input.unit.slice(0, 40)}" at your site.` }
+    const picked: UnitPick = byId ? { unit: byId, choices: null } : resolveUnit(units, input.unit, !!opts.pickUnit)
     if ('error' in picked) return { ok: false, error: picked.error }
     const unit = picked.unit
     unitChoices = picked.choices
@@ -433,8 +439,8 @@ async function loadDraft(
 async function writeProblem(ctx: MutationCtx, bound: BoundMember, draft: Doc<'pendingBotActions'>): Promise<string | null> {
   const p = draft.payload
   // Purchase orders and tasks are web (Ask Anowa) drafts: never committed from a chat.
-  if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue') return 'not a chat draft'
-  const permission = p.kind === 'daily_entry' ? 'production.daily.record' : 'inventory.issue'
+  if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue' && p.kind !== 'water_reading') return 'not a chat draft'
+  const permission = p.kind === 'feed_issue' ? 'inventory.issue' : 'production.daily.record'
   if (!can(bound.member, permission)) return `missing permission ${permission}`
   if (draft.siteId && !inScope(bound, draft.siteId)) return 'site not in your scope'
   if (p.cageId) {
@@ -485,10 +491,22 @@ export const commit = internalMutation({
     // Audit rows carry the channel and the message that carried the entry.
     const wctx = botCtx(ctx, bound, draft.sourceMessageId)
     const p = draft.payload
-    if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue') return { status: 'refused', message: 'not a chat draft' }
+    if (p.kind !== 'daily_entry' && p.kind !== 'feed_issue' && p.kind !== 'water_reading') {
+      return { status: 'refused', message: 'not a chat draft' }
+    }
     let dailyRecordId: Id<'dailyRecords'> | undefined
     let feedUsageId: Id<'feedUsage'> | undefined
-    if (p.kind === 'daily_entry') {
+    let recordRef: string | undefined
+    if (p.kind === 'water_reading') {
+      // The water log form's own helper (thresholds, alerts, audit).
+      const { id } = await recordReadingAs(wctx, bound.actor, {
+        unitId: p.cageId,
+        dissolvedOxygen: p.dissolvedOxygen,
+        temperatureC: p.temperatureC,
+        notes: p.notes,
+      })
+      recordRef = `waterQualityReadings:${id}`
+    } else if (p.kind === 'daily_entry') {
       const [id] = await saveDailyBatch(wctx, bound.actor, {
         date: draft.date,
         records: [
@@ -518,12 +536,12 @@ export const commit = internalMutation({
       })
     }
     const undoUntil = now + UNDO_WINDOW_MS
-    await ctx.db.patch(draft._id, { status: 'committed', committedAt: now, undoUntil, dailyRecordId, feedUsageId })
+    await ctx.db.patch(draft._id, { status: 'committed', committedAt: now, undoUntil, dailyRecordId, feedUsageId, recordRef })
     await ctx.db.insert('idempotencyKeys', {
       userId: draft.userId,
       key: idemKey,
       mutation: 'bot.commit',
-      result: { dailyRecordId: dailyRecordId ?? null, feedUsageId: feedUsageId ?? null },
+      result: { dailyRecordId: dailyRecordId ?? null, feedUsageId: feedUsageId ?? null, recordRef: recordRef ?? null },
       createdAt: now,
     })
     if (p.kind !== 'daily_entry') return { status: 'saved', undoUntil }
@@ -576,7 +594,20 @@ export const undo = internalMutation({
     const problem = await writeProblem(ctx, bound, draft)
     if (problem) return { status: 'refused' as const, message: problem }
     const wctx = botCtx(ctx, bound, args.sourceMessageId)
-    if (draft.dailyRecordId) {
+    if (draft.recordRef?.startsWith('waterQualityReadings:')) {
+      const id = ctx.db.normalizeId('waterQualityReadings', draft.recordRef.slice('waterQualityReadings:'.length))
+      const row = id ? await ctx.db.get(id) : null
+      // Gone or edited since: leave it to the app.
+      if (!row || row.source !== 'manual' || row.createdBy !== bound.actor._id) return { status: 'too_late' as const }
+      await ctx.db.delete(row._id)
+      await logAudit(wctx, {
+        actionType: 'delete',
+        tableName: 'waterQualityReadings',
+        recordId: row._id,
+        previousValues: row,
+        locationId: row.locationId,
+      })
+    } else if (draft.dailyRecordId) {
       const rec = await ctx.db.get(draft.dailyRecordId)
       // Edited in the app since: leave it to the app.
       const p = draft.payload

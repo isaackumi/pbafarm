@@ -271,6 +271,44 @@ export const pendingPayload = v.union(
   cyclePlanPayload,
 )
 
+/** One cage on a morning round card (T1a), as composed at send time. */
+export const roundCage = v.object({
+  cageId: v.id('cages'),
+  name: v.string(),
+  /** Today's kg from the feeding plan (PROD-015); null when the plan cannot cover the cage. */
+  planKg: v.union(v.number(), v.null()),
+  pelletMm: v.union(v.number(), v.null()),
+  feedings: v.union(v.number(), v.null()),
+  yesterdayKg: v.union(v.number(), v.null()),
+  yesterdayDead: v.union(v.number(), v.null()),
+  sampleDue: v.boolean(),
+  /** The keeper's tap: fed as planned, or same as yesterday, and the kg that means. */
+  mark: v.optional(v.union(v.literal('plan'), v.literal('same'))),
+  markKg: v.optional(v.number()),
+})
+
+/** Which cages a bot template fills (T2b). */
+export const templateCages = v.union(
+  /** The user's own cages that day (cage keepers), else nothing. */
+  v.object({ mode: v.literal('mine') }),
+  /** Every unit of a row at a site; new cages join automatically. */
+  v.object({ mode: v.literal('row'), row: v.string(), siteId: v.optional(v.id('farmLocations')) }),
+  v.object({ mode: v.literal('list'), cageIds: v.array(v.id('cages')) }),
+  /** No cages (feed issue). */
+  v.object({ mode: v.literal('none') }),
+)
+
+export const templateKind = v.union(
+  /** Daily entry: feed from the feeding plan per cage, dead fish 0 if not said. */
+  v.literal('daily_plan'),
+  /** Daily entry: yesterday's feed and feed type per cage. */
+  v.literal('daily_same'),
+  /** Water reading: DO and temperature in one line. */
+  v.literal('water_check'),
+  /** Feed issue from the store. */
+  v.literal('feed_issue'),
+)
+
 export const botTables = {
   /**
    * Every inbound webhook message, stored before any processing (BOT-001).
@@ -329,6 +367,12 @@ export const botTables = {
     lastReminderDate: v.optional(v.string()),
     /** Spoken language of voice notes (BOT-005, VOICE command): en, fr, tw, ee, gaa. Else from the account locale. */
     voiceLanguage: v.optional(v.string()),
+    /** Morning round card (T1a). Unset = on; ROUND OFF turns it off for this chat. */
+    roundEnabled: v.optional(v.boolean()),
+    /** A template (T2a) waiting for this chat's next line of readings. */
+    awaitingTemplate: v.optional(
+      v.object({ templateId: v.id('botTemplates'), cageIds: v.array(v.id('cages')), until: v.number() }),
+    ),
   })
     .index('by_provider_and_address', ['provider', 'address'])
     .index('by_userId', ['userId'])
@@ -540,6 +584,107 @@ export const botTables = {
   })
     .index('by_kind_and_recordId', ['kind', 'recordId'])
     .index('by_bindingId_and_status', ['bindingId', 'status'])
+    .index('by_companyId', ['companyId']),
+
+  /**
+   * The morning round card sent to one keeper's chat (T1a/T1b): one per
+   * (binding, farm date). `cages` is the card as composed at send time
+   * (at most MAX_ROUND_CAGES, exceptions first) plus each tap; `version`
+   * goes up on every change and `renderedVersion` is the last one shown in
+   * the chat, so concurrent taps converge on the latest state.
+   */
+  botRounds: defineTable({
+    companyId: v.id('companies'),
+    bindingId: v.id('channelBindings'),
+    userId: v.id('users'),
+    provider: botProvider,
+    siteId: v.optional(v.id('farmLocations')),
+    date: v.string(),
+    status: v.union(v.literal('queued'), v.literal('sent'), v.literal('failed')),
+    cages: v.array(roundCage),
+    /** The keeper's cages that did not fit on the card. */
+    more: v.number(),
+    /** Site feeding times, e.g. ["06:30", "15:30"], when the site has them. */
+    feedTimes: v.optional(v.array(v.string())),
+    /** Telegram message id of the card, for in-place edits. */
+    messageId: v.optional(v.number()),
+    version: v.number(),
+    renderedVersion: v.optional(v.number()),
+    /** The open draft group made by "Log all". */
+    groupId: v.optional(v.id('botDraftGroups')),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    sentAt: v.optional(v.number()),
+  })
+    .index('by_bindingId_and_date', ['bindingId', 'date'])
+    .index('by_companyId_and_date', ['companyId', 'date']),
+
+  /**
+   * Several chat drafts confirmed together (round "Log all", a template):
+   * the drafts carry draftGroup `chat:<id>`. Save all commits each through
+   * pending.commit (once per draft); Undo reverses each within 10 minutes.
+   */
+  botDraftGroups: defineTable({
+    companyId: v.id('companies'),
+    bindingId: v.id('channelBindings'),
+    userId: v.id('users'),
+    provider: botProvider,
+    kind: v.union(v.literal('round'), v.literal('template')),
+    roundId: v.optional(v.id('botRounds')),
+    templateId: v.optional(v.id('botTemplates')),
+    date: v.string(),
+    status: v.union(v.literal('open'), v.literal('saved'), v.literal('closed')),
+    savedAt: v.optional(v.number()),
+    undoUntil: v.optional(v.number()),
+    /** Water check: cages below the DO minimum, for the flag and Tell manager. */
+    low: v.optional(v.array(v.object({ cageName: v.string(), value: v.number(), limit: v.number() }))),
+    toldAt: v.optional(v.number()),
+    remindAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_bindingId_and_createdAt', ['bindingId', 'createdAt'])
+    .index('by_companyId', ['companyId']),
+
+  /**
+   * Saved bot templates (T2a/T2b): personal (only the owner) or shared with
+   * a site (everyone at it who may record). Using one fills drafts the user
+   * still checks and saves. `usage` holds the last 31 farm days.
+   */
+  botTemplates: defineTable({
+    companyId: v.id('companies'),
+    ownerId: v.id('users'),
+    name: v.string(),
+    kind: templateKind,
+    /** "/t c" picks this one directly (lowercase letters and digits). */
+    shortcut: v.optional(v.string()),
+    scope: v.union(v.literal('personal'), v.literal('site')),
+    /** The site a shared template is for. */
+    siteId: v.optional(v.id('farmLocations')),
+    cages: templateCages,
+    feedTypeId: v.optional(v.id('feedTypes')),
+    quantityKg: v.optional(v.number()),
+    usage: v.array(v.object({ date: v.string(), uses: v.number(), entries: v.number() })),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.id('users'),
+  })
+    .index('by_companyId', ['companyId'])
+    .index('by_ownerId', ['ownerId']),
+
+  /** Morning round per site (T1a): on by default at 06:00 site time. */
+  botRoundSettings: defineTable({
+    companyId: v.id('companies'),
+    locationId: v.id('farmLocations'),
+    enabled: v.boolean(),
+    /** "HH:MM" site time. */
+    time: v.string(),
+    /** The site's feeding times, shown on the card. */
+    feedTimes: v.optional(v.array(v.string())),
+    updatedAt: v.number(),
+    updatedBy: v.id('users'),
+  })
+    .index('by_locationId', ['locationId'])
     .index('by_companyId', ['companyId']),
 
   /**

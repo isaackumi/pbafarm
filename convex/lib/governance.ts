@@ -165,6 +165,11 @@ export const TENANT_TABLES: TenantTable[] = [
   { table: 'logbookScans', index: 'by_companyId_and_createdAt', export: false },
   { table: 'voiceNotes', index: 'by_companyId_and_createdAt', export: false },
   { table: 'botApprovalPrompts', index: 'by_companyId', export: false },
+  // Morning round and bot templates (T1, T2): templates and site settings exported; cards and groups transient.
+  { table: 'botTemplates', index: 'by_companyId' },
+  { table: 'botRoundSettings', index: 'by_companyId' },
+  { table: 'botRounds', index: 'by_companyId_and_date', export: false },
+  { table: 'botDraftGroups', index: 'by_companyId', export: false },
   // Governance bookkeeping: purged, not exported.
   { table: 'dataExports', index: 'by_companyId', export: false },
   { table: 'auditChainVerifications', index: 'by_companyId', export: false, purge: 'keep' },

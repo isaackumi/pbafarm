@@ -105,6 +105,8 @@ crons.cron('weekly farm reports', '30 6 * * 1', internal.aiReports.weeklyTick, {
 crons.interval('bot reminders', { minutes: 15 }, internal.bot.reminders.tick, {})
 
 // Farm bot drafts expire after 24 h; inbound message log is kept 30 days.
+// Morning round card (Paper T1a): each keeper's Telegram chat at the site's round time (default 06:00).
+crons.interval('bot morning round', { minutes: 15 }, internal.bot.rounds.tick, {})
 crons.interval('bot expire drafts', { hours: 1 }, internal.bot.pending.expireDrafts, {})
 crons.cron('prune bot inbound', '5 4 * * *', internal.bot.inbound.pruneInbound, {})
 // Voice-note audio is kept 30 days (BOT-005); transcripts stay with the drafts.
