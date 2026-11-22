@@ -6,6 +6,9 @@ const consoleHosts = parseConsoleHosts(process.env.NEXT_PUBLIC_PLATFORM_CONSOLE_
 /** Platform console host routing (PLAT-101); authorization is enforced by Convex, not here. */
 export function middleware(request) {
   const { pathname } = request.nextUrl
+  if (request.nextUrl.hostname === 'pbafarm.vercel.app' && pathname === '/') {
+    return NextResponse.rewrite(new URL('/pba-moved.html', request.url))
+  }
   const route = routeForHost({ host: request.headers.get('host'), pathname, consoleHosts })
   if (route.action === 'redirect') {
     const url = request.nextUrl.clone()
