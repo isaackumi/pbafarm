@@ -3,44 +3,111 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f7f4ed">
-  <title>PBA Farm has moved to Anowa</title>
+  <meta name="theme-color" content="#F4F0E8">
+  <title>PBA Farm is now on Anowa</title>
+  <meta name="description" content="PBA Farm has moved to Anowa. Sign in at app.getanowa.com with your existing PBA Farm email and password.">
   <link rel="icon" href="/brand/anowa-app-icon.svg">
   <style>
-    @font-face {font-family:Inter;src:url('/fonts/inter-latin-wght-normal.woff2')}
-    @font-face {font-family:Instrument;src:url('/fonts/instrument-serif-latin-400-normal.woff2')}
+    @font-face {font-family:Inter;src:url('/fonts/inter-latin-wght-normal.woff2') format('woff2');font-weight:100 900;font-display:swap}
+    @font-face {font-family:'Instrument Serif';src:url('/fonts/instrument-serif-latin-400-normal.woff2') format('woff2');font-display:swap}
+    @font-face {font-family:'Geist Mono';src:url('/fonts/geist-mono-latin-wght-normal.woff2') format('woff2');font-weight:100 900;font-display:swap}
     * {box-sizing:border-box}
-    body {margin:0;background:#f7f4ed;color:#182a26;font:1rem/1.55 Inter,Arial,sans-serif}
-    .page {max-width:1480px;margin:auto;padding:clamp(20px,5vw,80px)}
-    header {display:flex;align-items:center;justify-content:space-between;padding-bottom:22px;border-bottom:1px solid #c7cdc2}
-    header img {width:128px;height:auto} header span {font-weight:550;color:#42564c}
-    main {display:grid;grid-template-columns:1.15fr 1fr;align-items:center;gap:6vw;padding:clamp(42px,8vh,110px) 0}
-    h1 {font:400 clamp(4rem,7.8vw,8rem)/.94 Instrument,Georgia,serif;letter-spacing:-.048em;margin:0 0 28px}
-    p {font-size:clamp(1rem,1.5vw,1.25rem);max-width:40ch;color:#42564c;margin:0 0 32px}
-    a {display:inline-flex;align-items:center;gap:25px;padding:15px 23px;background:#173c33;color:white;border-radius:8px;text-decoration:none;font-weight:600}
-    a:hover {background:#235849} a:focus-visible {outline:3px solid #a94219;outline-offset:4px}
-    small {display:block;margin-top:10px;color:#4f6258}
-    .water {position:relative;isolation:isolate;overflow:hidden;aspect-ratio:1 / 1.02;border-radius:48% 48% 12px 12px;background:radial-gradient(ellipse at 24% 16%,#487e69,transparent 62%),#153c35;display:grid;place-items:center}
-    .water::before {content:'';position:absolute;inset:-45%;z-index:-1;background:repeating-radial-gradient(ellipse at 50% 76%,transparent 0 18px,#aad5ad40 19px,transparent 20px 28px);transform:rotate(-22deg)}
-    .fish {width:52%;height:auto;overflow:visible;filter:drop-shadow(0 8px 16px #163e33);animation:swim 5s ease-in-out infinite}
-    .pulse {stroke-dasharray:160;animation:draw 1.8s ease-out both}
-    @keyframes draw {from {stroke-dashoffset:160} to {stroke-dashoffset:0}}
-    @keyframes swim {50% {transform:translate(4px,-7px) rotate(-2deg)}}
-    @media(max-width:740px){main{grid-template-columns:1fr;gap:32px}.water{aspect-ratio:2.2;border-radius:90px 90px 8px 8px}.fish{width:30%}h1{font-size:clamp(3.5rem,13vw,5rem)}header img{width:110px}}
-    @media(prefers-reduced-motion:reduce){.fish,.pulse{animation:none}}
+    html,body {height:100%}
+    body {margin:0;background:#F4F0E8;color:#0B0D10;font:16px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    .page {min-height:100%;max-width:1440px;margin:auto;display:flex;flex-direction:column;padding:40px 72px}
+    .mono {font-family:'Geist Mono',ui-monospace,monospace}
+    header,footer {display:flex;align-items:center;justify-content:space-between;gap:16px;color:#5B6470;font-size:13px}
+    header {padding-bottom:24px;border-bottom:1px solid #0B0D101F}
+    footer {padding-top:20px;border-top:1px solid #0B0D101F}
+    footer a {color:inherit}
+    header img {width:120px;height:auto;display:block}
+    .former {display:flex;align-items:center;gap:8px}
+    .dot {width:6px;height:6px;border-radius:50%;background:#F2A07B}
+    main {flex:1;display:flex;align-items:center;gap:clamp(40px,5vw,80px);padding:56px 0}
+    .copy {flex:0 1 520px;min-width:0;display:flex;flex-direction:column;gap:28px}
+    .badge {align-self:flex-start;padding:6px 12px;border-radius:999px;background:#F2A07B2E;color:#9A4A26;font-size:13px;font-weight:600}
+    h1 {margin:0;font:400 clamp(3.5rem,6.7vw,6rem)/.95 'Instrument Serif',Georgia,serif;letter-spacing:-.03em}
+    p {margin:0;max-width:500px;font-size:19px;color:#3D4550}
+    .actions {display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .cta {display:inline-flex;align-items:center;justify-content:center;gap:14px;padding:16px 24px;border-radius:10px;background:#06121C;color:#F4F0E8;font-weight:600;text-decoration:none;transition:background .2s,transform .2s}
+    .cta:hover {background:#14283A;transform:translateY(-1px)}
+    .cta:focus-visible {outline:3px solid #F2A07B;outline-offset:3px}
+    .cta svg {transition:transform .2s} .cta:hover svg {transform:translate(2px,-2px)}
+    .actions .mono {font-size:14px;color:#5B6470}
+    .panel {position:relative;isolation:isolate;overflow:hidden;flex:1;min-width:360px;min-height:560px;display:flex;flex-direction:column;justify-content:space-between;padding:40px;border-radius:28px;background:#06121C}
+    .glow {position:absolute;z-index:-1;left:50%;top:44%;width:440px;height:440px;translate:-50% -50%;border-radius:50%;background:radial-gradient(circle,#F2A07B38 0%,#06121C00 70%);animation:breathe 6s ease-in-out infinite}
+    .label {font-size:12px;letter-spacing:.08em;color:#F4F0E880}
+    .mark {display:flex;align-items:center;justify-content:center;flex:1;padding:24px 0}
+    .mark svg {width:min(300px,70%);height:auto;overflow:visible}
+    .pulse {stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.6s cubic-bezier(.65,0,.35,1) .2s forwards}
+    .head {transform-origin:4.5px 34px;animation:pop .5s ease-out both}
+    .address {display:flex;flex-direction:column;gap:12px;padding:20px 24px;border-radius:16px;background:#F4F0E80F;border:1px solid #F4F0E81A}
+    .row {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px}
+    .row small {font:12px Inter,sans-serif}
+    .old {color:#F4F0E873;text-decoration:line-through} .old+small {color:#F4F0E873}
+    .new {color:#F4F0E8} .new+small {color:#F2A07B;font-weight:600}
+    .rule {height:1px;background:#F4F0E81A}
+    @keyframes draw {to {stroke-dashoffset:0}}
+    @keyframes pop {from {transform:scale(0)}}
+    @keyframes breathe {50% {opacity:.6;scale:.92}}
+    @media (max-width:1120px) {
+      .page {padding:24px 20px}
+      header img {width:104px} header,footer {font-size:12px}
+      main {flex-direction:column;align-items:stretch;gap:28px;padding:28px 0}
+      .copy {flex:none;gap:20px}
+      .badge {font-size:12px;padding:5px 10px}
+      h1 {font-size:clamp(3rem,14vw,3.5rem);line-height:.98}
+      p {font-size:16px}
+      .actions {flex-direction:column;align-items:stretch;gap:8px}
+      .actions .mono {display:none}
+      .panel {flex:none;min-width:0;min-height:0;padding:24px;border-radius:20px;gap:20px}
+      .label {display:none}
+      .glow {width:240px;height:240px;top:30%}
+      .mark {padding:12px 0} .mark svg {width:150px}
+      .address {padding:16px;border-radius:12px;gap:10px} .row {font-size:13px} .row small {font-size:11px}
+      footer {flex-direction:column;align-items:flex-start;gap:4px;border-top:0;padding-top:0}
+    }
+    @media (prefers-reduced-motion:reduce) {.pulse,.head,.glow {animation:none} .pulse {stroke-dashoffset:0}}
   </style>
 </head>
-<body><div class="page">
-  <header><img src="/brand/anowa-lockup-light.svg" alt="Anowa"><span>PBA Farm</span></header>
+<body>
+<div class="page">
+  <header>
+    <img src="/brand/anowa-lockup-light.svg" alt="Anowa">
+    <span class="former"><span class="dot" aria-hidden="true"></span>Formerly PBA Farm</span>
+  </header>
   <main>
-    <section aria-labelledby="move-title">
-      <h1 id="move-title">PBA Farm<br>has moved.</h1>
-      <p>Your farm workspace is now on Anowa. Sign in with the same credentials you already use for PBA Farm.</p>
-      <a href="https://app.getanowa.com/">Continue to Anowa <span aria-hidden="true">↗</span></a>
-      <small>app.getanowa.com</small>
+    <section class="copy" aria-labelledby="move-title">
+      <span class="badge">We've moved</span>
+      <h1 id="move-title">PBA Farm is now&nbsp;on Anowa.</h1>
+      <p>Same farm, same records, a new home. Sign in with the email and password you already use for PBA Farm.</p>
+      <div class="actions">
+        <a class="cta" href="https://app.getanowa.com/">Continue to Anowa
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 12L12 4M12 4H5.5M12 4V10.5" stroke="#F2A07B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <span class="mono">app.getanowa.com</span>
+      </div>
     </section>
-    <div class="water" aria-hidden="true">
-      <svg class="fish" viewBox="0 13 62 42" fill="none"><path class="pulse" d="M14.5 34 H18 L23 19 L30 49 L36 27 L40 34 H46 L58 22 L58 46 L46 34" stroke="#f4f1db" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4.5" cy="34" r="4" fill="#F2A07B"/></svg>
+    <div class="panel">
+      <div class="glow" aria-hidden="true"></div>
+      <span class="label mono">NEW ADDRESS</span>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="-2 13 66 42" fill="none">
+          <path class="pulse" pathLength="1" d="M14.5 34 H18 L23 19 L30 49 L36 27 L40 34 H46 L58 22 L58 46 L46 34" stroke="#F4F0E8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle class="head" cx="4.5" cy="34" r="4" fill="#F2A07B"/>
+        </svg>
+      </div>
+      <div class="address mono">
+        <div class="row"><span class="old">pbafarm.vercel.app</span><small>Old</small></div>
+        <div class="rule"></div>
+        <div class="row"><span class="new">app.getanowa.com</span><small>New</small></div>
+      </div>
     </div>
   </main>
-</div></body></html>
+  <footer>
+    <span>Tip: update your bookmark to app.getanowa.com</span>
+    <span>Need help? <a href="mailto:admin@pbafish.com">admin@pbafish.com</a></span>
+  </footer>
+</div>
+</body>
+</html>
