@@ -4,7 +4,7 @@
 
 Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA` (Anowa — Workspace (app, brand & clients)). Rules: [README.md](./README.md). Check procedure: [scripts/paper-ledger-check.md](../../scripts/paper-ledger-check.md).
 
-**146 artboards** · built: 30 · partial: 93 · not-built: 13 · proposal: 5 · superseded: 5
+**148 artboards** · built: 30 · partial: 93 · not-built: 13 · proposal: 5 · superseded: 7
 
 ## Anowa app · Desktop (`p-1-0`)
 
@@ -189,6 +189,8 @@ Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA` (Anowa — Workspace (app, brand & clien
 
 | # | name | id | theme | route | status | notes |
 |---|---|---|---|---|---|---|
-| — | PBA Farm moved notice (desktop, light) | `WKS-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). |
-| — | PBA Farm moved notice (mobile, light) | `WM2-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). |
+| — | PBA Farm moved notice (desktop, light) | `WKS-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | superseded | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). Superseded by v2 WN6-0 (Anowa light design system). |
+| — | PBA Farm moved notice (mobile, light) | `WM2-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | superseded | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). Superseded by v2 WP4-0 (Anowa light design system). |
+| — | PBA Farm moved notice v2 (desktop, Anowa light) | `WN6-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Browser-compared at 1440x900, 1000x800 and 901x800 against the Paper screenshot. Uses Anowa light tokens and the sign-in sky/lake panel. |
+| — | PBA Farm moved notice v2 (mobile, Anowa light) | `WP4-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Browser-compared at 390x844 and 320x640 against the Paper screenshot. Sky band with lockup overlay; stacks below 900px. |
 
