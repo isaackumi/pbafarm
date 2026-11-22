@@ -31,6 +31,10 @@
     {
       "id": "p-E-0",
       "name": "Anowa · Emails"
+    },
+    {
+      "id": "p-H-0",
+      "name": "Client · PBA Farm — Moved notice"
     }
   ],
   "artboards": [
@@ -2596,6 +2600,40 @@
       "hashedAt": "2026-11-21",
       "verifiedAt": null,
       "notes": "Proposed (owner request 2026-11-21), not approved or built. Light variant of T8a."
+    },
+    {
+      "id": "WKS-0",
+      "name": "PBA Farm moved notice (desktop, light)",
+      "page": "p-H-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "pbafarm.vercel.app/ (public/pba-moved.html)",
+      "implementation": [
+        "public/pba-moved.html",
+        "middleware.js"
+      ],
+      "status": "built",
+      "jsxHash": "0b052858787bd8ac914de245e283f5f1ca46e77399ee5a59bfbce45625f21ff9",
+      "hashedAt": "2026-11-22",
+      "verifiedAt": "2026-11-22",
+      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105)."
+    },
+    {
+      "id": "WM2-0",
+      "name": "PBA Farm moved notice (mobile, light)",
+      "page": "p-H-0",
+      "theme": "light",
+      "width": 390,
+      "route": "pbafarm.vercel.app/ (public/pba-moved.html)",
+      "implementation": [
+        "public/pba-moved.html",
+        "middleware.js"
+      ],
+      "status": "built",
+      "jsxHash": "1476a593556c84cafff61d8d06a9cdc918da15316ca6653c0f1d84dc55549ca9",
+      "hashedAt": "2026-11-22",
+      "verifiedAt": "2026-11-22",
+      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105)."
     }
   ]
 }

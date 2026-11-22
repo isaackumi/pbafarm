@@ -4,7 +4,7 @@
 
 Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA` (Anowa — Workspace (app, brand & clients)). Rules: [README.md](./README.md). Check procedure: [scripts/paper-ledger-check.md](../../scripts/paper-ledger-check.md).
 
-**144 artboards** · built: 28 · partial: 93 · not-built: 13 · proposal: 5 · superseded: 5
+**146 artboards** · built: 30 · partial: 93 · not-built: 13 · proposal: 5 · superseded: 5
 
 ## Anowa app · Desktop (`p-1-0`)
 
@@ -184,4 +184,11 @@ Paper file `01M7RD5Z2VX87M2KSRH9YKX8XA` (Anowa — Workspace (app, brand & clien
 | E7 | E7 Scheduled report (with CSV) — Dark | `TFM-2` | dark | `scheduledReportEmail (dark)` | partial | Same as E7 light. CSV badge keeps white bg/#15803D in dark (artboard dark uses #4ADE80 accent). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query. |
 | E5 | E5 Farm alert (urgent) — Dark | `TD9-2` | dark | `alertEmail (dark)` | partial | Same gaps as E5 light (no keeper note row, footer copy). Reading band has dark override (.band #2A1215/.band-t #FCA5A5 vs artboard #2A1414/#F87171). Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query. |
 | E6 | E6 Weekly Anowa summary — Dark | `TEG-2` | dark | `weeklySummaryEmail (dark)` | partial | Same gaps as E6 light (intro counts, extra report link, footer copy, no Help link); good-number card already dark. Dark via layout.ts @media (prefers-color-scheme:dark) + [data-ogsc]; tokens match artboard (page #0A0B0C, card #111315, tile #181A1D, line #2A2E33, link #6AA8F5); only in clients honoring the media query. |
+
+## Client · PBA Farm — Moved notice (`p-H-0`)
+
+| # | name | id | theme | route | status | notes |
+|---|---|---|---|---|---|---|
+| — | PBA Farm moved notice (desktop, light) | `WKS-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). |
+| — | PBA Farm moved notice (mobile, light) | `WM2-0` | light | `pbafarm.vercel.app/ (public/pba-moved.html)` | built | Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). |
 
