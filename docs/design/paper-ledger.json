@@ -2612,11 +2612,11 @@
         "public/pba-moved.html",
         "middleware.js"
       ],
-      "status": "built",
+      "status": "superseded",
       "jsxHash": "0b052858787bd8ac914de245e283f5f1ca46e77399ee5a59bfbce45625f21ff9",
       "hashedAt": "2026-11-22",
       "verifiedAt": "2026-11-22",
-      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105)."
+      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). Superseded by v2 WN6-0 (Anowa light design system)."
     },
     {
       "id": "WM2-0",
@@ -2629,11 +2629,45 @@
         "public/pba-moved.html",
         "middleware.js"
       ],
-      "status": "built",
+      "status": "superseded",
       "jsxHash": "1476a593556c84cafff61d8d06a9cdc918da15316ca6653c0f1d84dc55549ca9",
       "hashedAt": "2026-11-22",
       "verifiedAt": "2026-11-22",
-      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105)."
+      "notes": "Legacy PBA host notice. Browser-compared at 1440x900 and 390x844 against the Paper screenshots (PR #105). Superseded by v2 WP4-0 (Anowa light design system)."
+    },
+    {
+      "id": "WN6-0",
+      "name": "PBA Farm moved notice v2 (desktop, Anowa light)",
+      "page": "p-H-0",
+      "theme": "light",
+      "width": 1440,
+      "route": "pbafarm.vercel.app/ (public/pba-moved.html)",
+      "implementation": [
+        "public/pba-moved.html",
+        "middleware.js"
+      ],
+      "status": "built",
+      "jsxHash": "40df9bddc15da8436537a3266058fb0fd637f151624aa3bc97f3f11d386da567",
+      "hashedAt": "2026-11-22",
+      "verifiedAt": "2026-11-22",
+      "notes": "Browser-compared at 1440x900, 1000x800 and 901x800 against the Paper screenshot. Uses Anowa light tokens and the sign-in sky/lake panel."
+    },
+    {
+      "id": "WP4-0",
+      "name": "PBA Farm moved notice v2 (mobile, Anowa light)",
+      "page": "p-H-0",
+      "theme": "light",
+      "width": 390,
+      "route": "pbafarm.vercel.app/ (public/pba-moved.html)",
+      "implementation": [
+        "public/pba-moved.html",
+        "middleware.js"
+      ],
+      "status": "built",
+      "jsxHash": "14f29c314fa310e1b2bfe75483f4fea6bcafe91d24acde0dcb4457c64b955f39",
+      "hashedAt": "2026-11-22",
+      "verifiedAt": "2026-11-22",
+      "notes": "Browser-compared at 390x844 and 320x640 against the Paper screenshot. Sky band with lockup overlay; stacks below 900px."
     }
   ]
 }
